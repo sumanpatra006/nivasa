@@ -7,7 +7,7 @@ import {
   ValidateGuestCodeSchema,
   BatchSyncVisitorsSchema,
 } from '@nivasa/shared';
-import { societyStore } from '../billing/societyStore.js';
+import { VisitorRepository } from '../../repositories/visitor.repository.js';
 
 export const visitorsRouter = Router();
 
@@ -15,19 +15,17 @@ visitorsRouter.use(authMiddleware);
 
 /**
  * GET /api/v1/visitors
- * Retrieve visitor logs. Residents only see visitors for their authorized flat.
+ * Retrieve visitor logs from the database.
  */
-visitorsRouter.get('/', (req: Request, res: Response) => {
+visitorsRouter.get('/', async (req: Request, res: Response) => {
   const user = req.user!;
   let flatId = req.query.flatId as string | undefined;
 
-  // Enforce resident boundary: residents can only see their own flat's visitors
   if (user.role === 'RESIDENT') {
-    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
-    flatId = residentFlatId;
+    flatId = user.flatIds[0];
   }
 
-  const visitors = societyStore.getVisitors(flatId);
+  const visitors = await VisitorRepository.findMany(flatId);
   res.status(200).json({ visitors });
 });
 
@@ -35,7 +33,7 @@ visitorsRouter.get('/', (req: Request, res: Response) => {
  * POST /api/v1/visitors
  * Guard or resident registers a visitor entry.
  */
-visitorsRouter.post('/', (req: Request, res: Response) => {
+visitorsRouter.post('/', async (req: Request, res: Response) => {
   const parseResult = CreateVisitorSchema.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({
@@ -48,141 +46,29 @@ visitorsRouter.post('/', (req: Request, res: Response) => {
   const data = parseResult.data;
   const user = req.user!;
 
-  // If resident registers, enforce their flat
-  if (user.role === 'RESIDENT') {
-    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
-    if (data.flatId !== residentFlatId) {
-      res.status(403).json({ error: 'You are not authorized to register visitors for another flat.' });
-      return;
-    }
+  if (user.role === 'RESIDENT' && !user.flatIds.includes(data.flatId)) {
+    res.status(403).json({ error: 'You are not authorized to register visitors for another flat.' });
+    return;
   }
 
-  const visitor = societyStore.addVisitor({
-    clientUuid: data.clientUuid,
+  const visitor = await VisitorRepository.create({
     flatId: data.flatId,
     visitorName: data.visitorName,
     visitorPhone: data.visitorPhone,
     purpose: data.purpose,
     vehicleNumber: data.vehicleNumber,
     photoBase64: data.photoBase64,
-    visitorPhotoKey: data.visitorPhotoKey,
-    preApprovedCode: data.preApprovedCode,
-    recordedAt: data.recordedAt,
-    approvalStatus: data.preApprovedCode ? 'APPROVED' : (user.role === 'RESIDENT' ? 'APPROVED' : 'PENDING'),
-    entryStatus: 'CHECKED_IN',
+    approvalStatus: user.role === 'RESIDENT' ? 'APPROVED' : 'PENDING',
   });
 
   res.status(201).json({ visitor });
 });
 
 /**
- * POST /api/v1/visitors/sync-batch
- * Offline queue sync batch endpoint for guard tablet.
- * Deduplicates using clientUuid and preserves original recordedAt timestamp.
- */
-visitorsRouter.post('/sync-batch', (req: Request, res: Response) => {
-  const parseResult = BatchSyncVisitorsSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    res.status(400).json({
-      error: 'Validation Error',
-      details: parseResult.error.format(),
-    });
-    return;
-  }
-
-  const result = societyStore.batchSyncVisitors(parseResult.data.visitors);
-  res.status(200).json(result);
-});
-
-/**
- * GET /api/v1/visitors/guest-codes
- * Retrieve guest pass codes.
- */
-visitorsRouter.get('/guest-codes', (req: Request, res: Response) => {
-  const user = req.user!;
-  let flatId = req.query.flatId as string | undefined;
-
-  if (user.role === 'RESIDENT') {
-    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
-    flatId = residentFlatId;
-  }
-
-  const guestCodes = societyStore.getGuestCodes(flatId);
-  res.status(200).json({ guestCodes });
-});
-
-/**
- * POST /api/v1/visitors/guest-codes
- * Resident generates a 6-digit pre-approved guest pass PIN with validity window.
- */
-visitorsRouter.post('/guest-codes', (req: Request, res: Response) => {
-  const user = req.user!;
-  const parseResult = GenerateGuestCodeSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    res.status(400).json({
-      error: 'Validation Error',
-      details: parseResult.error.format(),
-    });
-    return;
-  }
-
-  const data = parseResult.data;
-  if (user.role === 'RESIDENT') {
-    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
-    if (data.flatId !== residentFlatId) {
-      res.status(403).json({ error: 'You are not authorized to create guest passes for another flat.' });
-      return;
-    }
-  }
-
-  const guestCode = societyStore.createGuestCode({
-    flatId: data.flatId,
-    guestName: data.guestName,
-    purpose: data.purpose,
-    validFrom: data.validFrom,
-    validUntil: data.validUntil,
-    usageLimit: data.usageLimit,
-  });
-
-  res.status(201).json({ guestCode });
-});
-
-/**
- * POST /api/v1/visitors/guest-codes/validate
- * Guard tablet keypad validates a 6-digit PIN and automatically checks in the guest.
- */
-visitorsRouter.post('/guest-codes/validate', (req: Request, res: Response) => {
-  const parseResult = ValidateGuestCodeSchema.safeParse(req.body);
-  if (!parseResult.success) {
-    res.status(400).json({
-      error: 'Validation Error',
-      details: parseResult.error.format(),
-    });
-    return;
-  }
-
-  const result = societyStore.validateGuestCode(parseResult.data.code);
-  if (!result.isValid) {
-    res.status(400).json({
-      isValid: false,
-      reason: result.reason,
-    });
-    return;
-  }
-
-  res.status(200).json({
-    isValid: true,
-    guestCode: result.guestCode,
-    visitor: result.visitor,
-    message: `Guest pass validated. Visitor ${result.guestCode?.guestName} checked in successfully.`,
-  });
-});
-
-/**
  * PATCH /api/v1/visitors/:id/approval
- * Resident approves or denies an arriving visitor.
+ * Resident approves or denies pending visitor entry.
  */
-visitorsRouter.patch('/:id/approval', (req: Request, res: Response) => {
+visitorsRouter.patch('/:id/approval', async (req: Request, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const parseResult = VisitorApprovalSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -193,63 +79,158 @@ visitorsRouter.patch('/:id/approval', (req: Request, res: Response) => {
     return;
   }
 
-  const visitor = societyStore.getVisitorById(id);
-  if (!visitor) {
+  const { status } = parseResult.data;
+  const updated = await VisitorRepository.updateApproval(id, status);
+
+  if (!updated) {
     res.status(404).json({ error: 'Visitor record not found' });
     return;
   }
 
+  res.status(200).json({
+    message: `Visitor entry ${status.toLowerCase()} successfully`,
+    visitor: updated,
+  });
+});
+
+/**
+ * POST /api/v1/visitors/:id/exit
+ * Guard logs visitor exit.
+ */
+visitorsRouter.post('/:id/exit', async (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const updated = await VisitorRepository.recordExit(id);
+
+  if (!updated) {
+    res.status(404).json({ error: 'Visitor record not found' });
+    return;
+  }
+
+  res.status(200).json({
+    message: 'Visitor departure confirmed',
+    visitor: updated,
+  });
+});
+
+/**
+ * POST /api/v1/visitors/purge-photos
+ * DPDP Act 2023 compliance scheduled photo deletion job.
+ */
+visitorsRouter.post('/purge-photos', async (_req: Request, res: Response) => {
+  const purgeResult = await VisitorRepository.purgeExpiredPhotos();
+
+  res.status(200).json({
+    message: 'DPDP 90-day retention purge completed',
+    purgedPhotosCount: purgeResult.purgedCount,
+    purgedFiles: purgeResult.filesDeleted,
+    complianceStatus: 'DPDP_ACT_2023_COMPLIANT',
+  });
+});
+
+/**
+ * GET /api/v1/visitors/guest-codes
+ * Retrieve active pre-approved guest codes.
+ */
+visitorsRouter.get('/guest-codes', async (req: Request, res: Response) => {
   const user = req.user!;
+  let flatId = req.query.flatId as string | undefined;
+
   if (user.role === 'RESIDENT') {
-    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
-    if (visitor.flatId !== residentFlatId) {
-      res.status(403).json({ error: 'You are not authorized to approve visitors for another flat.' });
-      return;
-    }
+    flatId = user.flatIds[0];
   }
 
-  const updated = societyStore.updateVisitorApproval(id, parseResult.data.status);
-  res.status(200).json({ visitor: updated });
+  const codes = await VisitorRepository.getGuestCodes(flatId);
+  res.status(200).json({ guestCodes: codes });
 });
 
 /**
- * PATCH /api/v1/visitors/:id/entry
- * Guard records visitor entry / check-in.
+ * POST /api/v1/visitors/guest-codes
+ * Resident generates a 6-digit PIN for an upcoming guest.
  */
-visitorsRouter.patch('/:id/entry', (req: Request, res: Response) => {
-  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const visitor = societyStore.getVisitorById(id);
-  if (!visitor) {
-    res.status(404).json({ error: 'Visitor record not found' });
+visitorsRouter.post('/guest-codes', async (req: Request, res: Response) => {
+  const parseResult = GenerateGuestCodeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: parseResult.error.format(),
+    });
     return;
   }
 
-  const updated = societyStore.recordVisitorEntry(id);
-  res.status(200).json({ visitor: updated });
-});
+  const data = parseResult.data;
+  const user = req.user!;
 
-/**
- * PATCH /api/v1/visitors/:id/exit
- * Guard records visitor exit / check-out.
- */
-visitorsRouter.patch('/:id/exit', (req: Request, res: Response) => {
-  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const visitor = societyStore.getVisitorById(id);
-  if (!visitor) {
-    res.status(404).json({ error: 'Visitor record not found' });
+  if (user.role === 'RESIDENT' && !user.flatIds.includes(data.flatId)) {
+    res.status(403).json({ error: 'You are not authorized to create guest passes for another flat.' });
     return;
   }
 
-  const updated = societyStore.recordVisitorExit(id);
-  res.status(200).json({ visitor: updated });
+  const validUntilHours = data.validUntil
+    ? Math.max(1, Math.round((new Date(data.validUntil).getTime() - Date.now()) / 3600000))
+    : 24;
+
+  const guestCode = await VisitorRepository.createGuestCode({
+    flatId: data.flatId,
+    residentId: user.id || 'user-staff-vikram',
+    guestName: data.guestName,
+    validUntilHours,
+  });
+
+  res.status(201).json({ guestCode });
 });
 
 /**
- * POST /api/v1/visitors/purge-expired-photos
- * DPDP Act 2023 compliance endpoint (scheduled daily job triggers this).
- * Deletes the physical photo file from disk after 90 days.
+ * POST /api/v1/visitors/guest-codes/validate
+ * Guard terminal enters 6-digit PIN on tablet keypad.
  */
-visitorsRouter.post('/purge-expired-photos', (_req: Request, res: Response) => {
-  const result = societyStore.purgeExpiredVisitorPhotos();
-  res.status(200).json(result);
+visitorsRouter.post('/guest-codes/validate', async (req: Request, res: Response) => {
+  const parseResult = ValidateGuestCodeSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: parseResult.error.format(),
+    });
+    return;
+  }
+
+  const result = await VisitorRepository.validateGuestCode(parseResult.data.code);
+
+  res.status(200).json({
+    isValid: result.isValid,
+    reason: result.reason,
+    guestCode: result.guestCode,
+  });
+});
+
+/**
+ * POST /api/v1/visitors/batch-sync
+ * Guard tablet syncs queued offline visitor records when reconnecting.
+ */
+visitorsRouter.post('/batch-sync', async (req: Request, res: Response) => {
+  const parseResult = BatchSyncVisitorsSchema.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: parseResult.error.format(),
+    });
+    return;
+  }
+
+  const items = parseResult.data.visitors;
+  for (const item of items) {
+    await VisitorRepository.create({
+      flatId: item.flatId,
+      visitorName: item.visitorName,
+      visitorPhone: item.visitorPhone,
+      purpose: item.purpose,
+      vehicleNumber: item.vehicleNumber,
+      photoBase64: item.photoBase64,
+    });
+  }
+
+  res.status(200).json({
+    message: `Successfully synchronized ${items.length} visitor record(s).`,
+    syncedCount: items.length,
+    totalReceived: items.length,
+  });
 });

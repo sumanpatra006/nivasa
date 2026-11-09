@@ -17,10 +17,14 @@ dashboardRouter.use(authMiddleware);
 dashboardRouter.get(
   '/committee',
   rbacMiddleware([USER_ROLES.COMMITTEE, USER_ROLES.ACCOUNTS]),
-  (req: Request, res: Response) => {
-    const period = typeof req.query.period === 'string' ? req.query.period : undefined;
-    const metrics = CommitteeMetricsService.getMetrics(period);
-    res.status(200).json(metrics);
+  async (req: Request, res: Response) => {
+    try {
+      const period = typeof req.query.period === 'string' ? req.query.period : undefined;
+      const metrics = await CommitteeMetricsService.getMetrics(period);
+      res.status(200).json(metrics);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to compute committee metrics', details: String(err) });
+    }
   }
 );
 
@@ -32,14 +36,18 @@ dashboardRouter.get(
 dashboardRouter.get(
   '/reports/monthly-collection',
   rbacMiddleware([USER_ROLES.COMMITTEE, USER_ROLES.ACCOUNTS]),
-  (req: Request, res: Response) => {
-    const period = typeof req.query.period === 'string' ? req.query.period : undefined;
-    const csvContent = CommitteeMetricsService.generateMonthlyCollectionCsv(period);
+  async (req: Request, res: Response) => {
+    try {
+      const period = typeof req.query.period === 'string' ? req.query.period : undefined;
+      const csvContent = await CommitteeMetricsService.generateMonthlyCollectionCsv(period);
 
-    const filename = `nivasa-monthly-collection-${period || 'all'}.csv`;
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.status(200).send(csvContent);
+      const filename = `nivasa-monthly-collection-${period || 'all'}.csv`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.status(200).send(csvContent);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to generate collection CSV', details: String(err) });
+    }
   }
 );
 
@@ -51,11 +59,15 @@ dashboardRouter.get(
 dashboardRouter.get(
   '/reports/complaints',
   rbacMiddleware([USER_ROLES.COMMITTEE, USER_ROLES.ACCOUNTS]),
-  (_req: Request, res: Response) => {
-    const csvContent = CommitteeMetricsService.generateComplaintsCsv();
+  async (_req: Request, res: Response) => {
+    try {
+      const csvContent = await CommitteeMetricsService.generateComplaintsCsv();
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="nivasa-complaints-report.csv"');
-    res.status(200).send(csvContent);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="nivasa-complaints-report.csv"');
+      res.status(200).send(csvContent);
+    } catch (err) {
+      res.status(500).json({ error: 'Failed to generate complaints CSV', details: String(err) });
+    }
   }
 );

@@ -2,32 +2,26 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
 import { rbacMiddleware } from '../../middleware/rbac.middleware.js';
 import { USER_ROLES } from '@nivasa/shared';
-import { societyStore } from './societyStore.js';
+import { InvoiceRepository } from '../../repositories/invoice.repository.js';
 
 export const billingRouter = Router();
 
 billingRouter.use(authMiddleware);
 
-// GET /api/v1/bills - Fetch invoices for authorized user/flats
-billingRouter.get('/', (req: Request, res: Response) => {
+// GET /api/v1/bills - Fetch invoices from database for authorized user/flats
+billingRouter.get('/', async (req: Request, res: Response) => {
   const user = req.user!;
-  const allInvoices = societyStore.getInvoices();
+  const filter = user.role === USER_ROLES.RESIDENT ? { flatId: { in: user.flatIds } } : {};
 
-  if (user.role === USER_ROLES.RESIDENT) {
-    const userInvoices = allInvoices.filter((inv) => user.flatIds.includes(inv.flatId));
-    res.status(200).json({ invoices: userInvoices });
-    return;
-  }
-
-  // Staff and Committee see all society invoices
-  res.status(200).json({ invoices: allInvoices });
+  const invoices = await InvoiceRepository.findMany(filter);
+  res.status(200).json({ invoices });
 });
 
 // GET /api/v1/bills/:id - Fetch single invoice with horizontal flat isolation
-billingRouter.get('/:id', (req: Request, res: Response) => {
+billingRouter.get('/:id', async (req: Request, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const user = req.user!;
-  const invoice = societyStore.getInvoiceById(id);
+  const invoice = await InvoiceRepository.findById(id);
 
   if (!invoice) {
     res.status(404).json({ error: 'Not Found', message: `Invoice with ID ${id} not found.` });

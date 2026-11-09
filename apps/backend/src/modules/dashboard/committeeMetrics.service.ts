@@ -4,7 +4,8 @@ import {
   FlatOutstandingAccount,
   COMPLAINT_STATUS,
 } from '@nivasa/shared';
-import { societyStore, InvoiceRecord } from '../billing/societyStore.js';
+import { InvoiceRepository, FormattedInvoice } from '../../repositories/invoice.repository.js';
+import { ComplaintRepository, FormattedComplaint } from '../../repositories/complaint.repository.js';
 
 export class CommitteeMetricsService {
   /**
@@ -23,9 +24,9 @@ export class CommitteeMetricsService {
    * Computes comprehensive committee oversight metrics using actual persisted records.
    * Strictly avoids hardcoded values and fake historical claims.
    */
-  public static getMetrics(periodFilter?: string): CommitteeDashboardMetrics {
-    const allInvoices = societyStore.getInvoices();
-    const allComplaints = societyStore.getComplaints();
+  public static async getMetrics(periodFilter?: string): Promise<CommitteeDashboardMetrics> {
+    const allInvoices = await InvoiceRepository.findMany();
+    const allComplaints = await ComplaintRepository.findMany();
 
     const activePeriod = periodFilter && periodFilter !== 'ALL' ? periodFilter : '2026-11';
 
@@ -269,12 +270,13 @@ export class CommitteeMetricsService {
   /**
    * Generates a monthly collections summary CSV from actual database invoices.
    */
-  public static generateMonthlyCollectionCsv(periodFilter?: string): string {
-    const metrics = this.getMetrics(periodFilter);
+  public static async generateMonthlyCollectionCsv(periodFilter?: string): Promise<string> {
+    const metrics = await this.getMetrics(periodFilter);
+    const allInvoices = await InvoiceRepository.findMany();
     const invoices =
       periodFilter && periodFilter !== 'ALL'
-        ? societyStore.getInvoices().filter((inv) => inv.billingPeriod === periodFilter)
-        : societyStore.getInvoices();
+        ? allInvoices.filter((inv) => inv.billingPeriod === periodFilter)
+        : allInvoices;
 
     const headers = [
       'Tower',
@@ -349,8 +351,8 @@ export class CommitteeMetricsService {
   /**
    * Generates a complaints summary CSV from actual database complaints.
    */
-  public static generateComplaintsCsv(): string {
-    const complaints = societyStore.getComplaints();
+  public static async generateComplaintsCsv(): Promise<string> {
+    const complaints = await ComplaintRepository.findMany();
 
     const headers = [
       'Ticket ID',

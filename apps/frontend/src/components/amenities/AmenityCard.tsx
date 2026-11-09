@@ -39,3 +39,4 @@ export function AmenityCard({ amenity, isSelected, onSelect }: AmenityCardProps)
     </div>
   );
 }
+

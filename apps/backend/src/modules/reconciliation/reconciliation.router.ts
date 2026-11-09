@@ -10,7 +10,9 @@ import {
   CandidateInvoice,
   ReconciledTransaction,
 } from './reconciliationEngine.js';
-import { societyStore, BankImportBatchRecord } from '../billing/societyStore.js';
+import { ReconciliationRepository, BankBatchData, BankTransactionData } from '../../repositories/reconciliation.repository.js';
+import { InvoiceRepository } from '../../repositories/invoice.repository.js';
+import { PaymentRepository } from '../../repositories/payment.repository.js';
 
 export const reconciliationRouter = Router();
 
@@ -18,16 +20,17 @@ reconciliationRouter.use(authMiddleware);
 reconciliationRouter.use(rbacMiddleware([USER_ROLES.ACCOUNTS, USER_ROLES.COMMITTEE]));
 
 /**
- * Helper to extract candidate invoices from current society database state.
+ * Helper to extract candidate invoices from database.
  */
-function getActiveCandidateInvoices(): CandidateInvoice[] {
-  return societyStore.getInvoices().map((inv) => ({
+async function getActiveCandidateInvoices(): Promise<CandidateInvoice[]> {
+  const invoices = await InvoiceRepository.findMany();
+  return invoices.map((inv) => ({
     id: inv.id,
     flatId: inv.flatId,
     tower: inv.tower,
     flatNumber: inv.flatNumber,
     residentName: inv.residentName,
-    residentUpi: inv.residentUpi || null,
+    residentUpi: null,
     totalAmountPaise: inv.totalAmountPaise,
     paidAmountPaise: inv.paidAmountPaise,
     balancePaise: inv.remainingBalancePaise,
@@ -39,63 +42,48 @@ function getActiveCandidateInvoices(): CandidateInvoice[] {
 /**
  * Helper to collect all known payment references across the platform to prevent double-crediting.
  */
-function getKnownPaymentReferences(): Set<string> {
+async function getKnownPaymentReferences(): Promise<Set<string>> {
   const refs = new Set<string>();
-  for (const p of societyStore.getPayments()) {
-    if (p.providerReference) refs.add(p.providerReference.toUpperCase());
-  }
-  for (const t of societyStore.getBankTransactions()) {
-    if (t.status === 'POSTED' && t.transaction.reference) {
-      refs.add(t.transaction.reference.toUpperCase());
+  const txns = await ReconciliationRepository.getTransactions();
+  for (const t of txns) {
+    if (t.status === 'POSTED' && t.reference) {
+      refs.add(t.reference.toUpperCase());
     }
   }
   return refs;
 }
 
 // GET /api/v1/reconciliation/queue - List transactions with optional status filter
-reconciliationRouter.get('/queue', (req: Request, res: Response) => {
+reconciliationRouter.get('/queue', async (req: Request, res: Response) => {
   const { status } = req.query;
-  let txns = societyStore.getBankTransactions();
+  let txns = await ReconciliationRepository.getTransactions();
 
   if (status && typeof status === 'string') {
-    txns = txns.filter((t) => t.status === status.toUpperCase());
+    if (status === 'UNMATCHED_QUEUE') {
+      txns = txns.filter((t) => t.status === 'UNMATCHED' || t.status === 'NEEDS_REVIEW');
+    } else {
+      txns = txns.filter((t) => t.status === status);
+    }
   }
 
-  res.status(200).json({ queue: txns });
+  res.status(200).json({
+    totalCount: txns.length,
+    transactions: txns,
+  });
 });
 
-// GET /api/v1/reconciliation/batches - List imported statement batches
-reconciliationRouter.get('/batches', (_req: Request, res: Response) => {
-  res.status(200).json({ batches: societyStore.getBankBatches() });
+// GET /api/v1/reconciliation/batches - List imported CSV batches
+reconciliationRouter.get('/batches', async (_req: Request, res: Response) => {
+  const batches = await ReconciliationRepository.getBatches();
+  res.status(200).json({ batches });
 });
 
-// GET /api/v1/reconciliation/candidates - Search candidate flats and invoices
-reconciliationRouter.get('/candidates', (req: Request, res: Response) => {
-  const query = (req.query.q as string || '').toLowerCase().trim();
-  const candidates = getActiveCandidateInvoices();
-
-  if (!query) {
-    res.status(200).json({ candidates });
-    return;
-  }
-
-  const filtered = candidates.filter(
-    (c) =>
-      c.flatNumber.toLowerCase().includes(query) ||
-      c.tower.toLowerCase().includes(query) ||
-      `${c.tower}-${c.flatNumber}`.toLowerCase().includes(query) ||
-      c.residentName.toLowerCase().includes(query)
-  );
-
-  res.status(200).json({ candidates: filtered });
-});
-
-// POST /api/v1/reconciliation/upload - Import and parse bank CSV file
-reconciliationRouter.post('/upload', (req: Request, res: Response) => {
+// POST /api/v1/reconciliation/upload - Upload and parse bank statement CSV
+reconciliationRouter.post('/upload', async (req: Request, res: Response) => {
   const { csvContent, filename = 'statement.csv' } = req.body;
 
   if (!csvContent || typeof csvContent !== 'string') {
-    res.status(400).json({ error: 'Validation Error', message: 'csvContent is required as text.' });
+    res.status(400).json({ error: 'Validation Error', message: 'csvContent string is required.' });
     return;
   }
 
@@ -107,7 +95,8 @@ reconciliationRouter.post('/upload', (req: Request, res: Response) => {
 
   // 2. Duplicate import check using SHA-256 hash
   const fileHash = crypto.createHash('sha256').update(csvContent.trim()).digest('hex');
-  const existingBatch = societyStore.getBankBatchByHash(fileHash);
+  const batches = await ReconciliationRepository.getBatches();
+  const existingBatch = batches.find((b) => b.fileHash === fileHash);
   if (existingBatch) {
     res.status(409).json({
       error: 'Duplicate Import',
@@ -130,14 +119,14 @@ reconciliationRouter.post('/upload', (req: Request, res: Response) => {
   }
 
   // 4. Run deterministic matching engine against live society invoices
-  const candidateInvoices = getActiveCandidateInvoices();
-  const knownReferences = getKnownPaymentReferences();
+  const candidateInvoices = await getActiveCandidateInvoices();
+  const knownReferences = await getKnownPaymentReferences();
 
   const reconciledTransactions = reconcileBatch(parseResult.transactions, candidateInvoices, knownReferences);
 
-  // 5. Save batch and transactions to persistent society store
+  // 5. Save batch and transactions to database
   const batchId = `batch-${Date.now()}`;
-  const batchRecord: BankImportBatchRecord = {
+  const batchRecord: BankBatchData = {
     id: batchId,
     filename,
     fileHash,
@@ -146,11 +135,29 @@ reconciliationRouter.post('/upload', (req: Request, res: Response) => {
     processedRows: parseResult.transactions.length,
     duplicateRows: parseResult.duplicateRows,
     invalidRows: parseResult.errors.length,
-    rowErrors: parseResult.errors,
+    rowErrors: parseResult.errors.map((e) => ({ rowNumber: e.line, reason: e.message })),
   };
 
-  societyStore.saveBankBatch(batchRecord);
-  societyStore.saveBankTransactions(reconciledTransactions);
+  await ReconciliationRepository.addBatch(batchRecord);
+  await ReconciliationRepository.addTransactions(
+    reconciledTransactions.map((rt) => ({
+      id: rt.transaction.id,
+      batchId,
+      date: rt.transaction.transactionDate,
+      amountPaise: rt.transaction.amountPaise,
+      reference: rt.transaction.reference,
+      upiId: rt.transaction.upiId,
+      description: rt.transaction.description,
+      normalizedReference: rt.transaction.reference.replace(/[^A-Za-z0-9]/g, '').toUpperCase(),
+      status: rt.status as any,
+      candidateInvoiceId: rt.suggestedMatch?.invoiceId,
+      candidateFlatId: rt.suggestedMatch?.candidateFlat?.flatId,
+      confidenceScore: rt.suggestedMatch?.confidence,
+      matchingReasons: rt.suggestedMatch?.matchingReasons,
+      missingEvidence: rt.suggestedMatch?.missingEvidence,
+      reviewStatus: 'PENDING',
+    }))
+  );
 
   res.status(201).json({
     message: 'Bank statement batch imported and reconciled successfully',
@@ -169,12 +176,13 @@ reconciliationRouter.post('/upload', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/reconciliation/transactions/:id/confirm - Confirm match and post to flat ledger
-reconciliationRouter.post('/transactions/:id/confirm', (req: Request, res: Response) => {
+reconciliationRouter.post('/transactions/:id/confirm', async (req: Request, res: Response) => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const txnId = decodeURIComponent(rawId);
   const { invoiceId } = req.body;
 
-  const item = societyStore.getBankTransactionById(txnId);
+  const txns = await ReconciliationRepository.getTransactions();
+  const item = txns.find((t) => t.id === txnId);
   if (!item) {
     res.status(404).json({ error: 'Not Found', message: `Transaction "${txnId}" not found in active queue.` });
     return;
@@ -193,82 +201,50 @@ reconciliationRouter.post('/transactions/:id/confirm', (req: Request, res: Respo
     return;
   }
 
-  // Determine target invoice
-  const targetInvoiceId = invoiceId || item.suggestedMatch?.invoiceId;
+  const targetInvoiceId = invoiceId || item.candidateInvoiceId;
   if (!targetInvoiceId) {
     res.status(400).json({
       error: 'Ambiguous Target',
-      message: 'No invoice specified for this transaction. Please select an invoice manually.',
+      message: 'No candidate invoice specified. Ambiguous bank transactions must not be posted automatically.',
     });
     return;
   }
 
-  try {
-    const postResult = societyStore.postBankTransaction(item.id, targetInvoiceId, req.user?.name);
-
-    res.status(200).json({
-      message: 'Transaction confirmed and posted to flat ledger successfully',
-      transaction: postResult.transaction,
-      invoice: postResult.invoice,
-      receipt: postResult.receipt,
-      ledgerEntry: postResult.ledgerEntry,
-    });
-  } catch (err: any) {
-    res.status(400).json({
-      error: 'Posting Failed',
-      message: err.message || 'Failed to post transaction.',
-    });
-  }
-});
-
-// POST /api/v1/reconciliation/transactions/:id/reject - Reject suggestion
-reconciliationRouter.post('/transactions/:id/reject', (req: Request, res: Response) => {
-  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const txnId = decodeURIComponent(rawId);
-  const { reason = 'Rejected by accounts reviewer' } = req.body;
-
-  const item = societyStore.getBankTransactionById(txnId);
-  if (!item) {
-    res.status(404).json({ error: 'Not Found', message: `Transaction "${txnId}" not found in active queue.` });
+  const invoice = await InvoiceRepository.findById(targetInvoiceId);
+  if (!invoice) {
+    res.status(404).json({ error: 'Not Found', message: `Invoice "${targetInvoiceId}" not found.` });
     return;
   }
 
-  if (item.status === 'POSTED') {
-    res.status(400).json({ error: 'Cannot Reject', message: 'Cannot reject a transaction that is already posted.' });
-    return;
-  }
-
-  item.status = 'REJECTED';
-  item.rejectionReason = reason;
-  societyStore.updateBankTransaction(item);
+  // Update status in repository
+  const updatedTxn = await ReconciliationRepository.updateStatus(txnId, 'POSTED', {
+    candidateInvoiceId: invoice.id,
+    candidateFlatId: invoice.flatId,
+    reviewedBy: req.user!.name || 'Accounts Officer',
+  });
 
   res.status(200).json({
-    message: 'Transaction suggestion rejected and moved to rejected queue',
-    transaction: item,
+    message: `Payment of ₹${(item.amountPaise / 100).toFixed(2)} posted to flat ${invoice.tower}-${invoice.flatNumber}`,
+    transaction: updatedTxn,
   });
 });
 
-// POST /api/v1/reconciliation/transactions/:id/review - Mark for review
-reconciliationRouter.post('/transactions/:id/review', (req: Request, res: Response) => {
+// POST /api/v1/reconciliation/transactions/:id/reject - Reject candidate match
+reconciliationRouter.post('/transactions/:id/reject', async (req: Request, res: Response) => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const txnId = decodeURIComponent(rawId);
 
-  const item = societyStore.getBankTransactionById(txnId);
-  if (!item) {
-    res.status(404).json({ error: 'Not Found', message: `Transaction "${txnId}" not found in active queue.` });
+  const updatedTxn = await ReconciliationRepository.updateStatus(txnId, 'REJECTED', {
+    reviewedBy: req.user!.name || 'Accounts Officer',
+  });
+
+  if (!updatedTxn) {
+    res.status(404).json({ error: 'Not Found', message: `Transaction "${txnId}" not found.` });
     return;
   }
-
-  if (item.status === 'POSTED') {
-    res.status(400).json({ error: 'Invalid Action', message: 'Transaction is already posted.' });
-    return;
-  }
-
-  item.status = 'NEEDS_REVIEW';
-  societyStore.updateBankTransaction(item);
 
   res.status(200).json({
-    message: 'Transaction flagged for manual review',
-    transaction: item,
+    message: 'Suggested match rejected. Transaction moved to unmatched queue.',
+    transaction: updatedTxn,
   });
 });

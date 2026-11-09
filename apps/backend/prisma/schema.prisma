@@ -108,6 +108,20 @@ model User {
   @@index([role])
 }
 
+model OtpVerification {
+  id          String    @id @default(uuid())
+  phone       String
+  codeHash    String
+  attempts    Int       @default(0)
+  isVerified  Boolean   @default(false)
+  expiresAt   DateTime
+  verifiedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([phone])
+  @@index([expiresAt])
+}
+
 model Flat {
   id              String           @id @default(uuid())
   flatNumber      String

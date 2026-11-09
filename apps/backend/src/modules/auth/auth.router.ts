@@ -4,13 +4,11 @@ import { RequestOtpSchema, VerifyOtpSchema, USER_ROLES, UserRole } from '@nivasa
 import { env } from '../../config/env.js';
 import { prisma } from '../../config/prisma.js';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
+import { SmsService } from '../../services/sms.service.js';
 
 export const authRouter = Router();
 
-// In-memory demo OTP store (keyed by phone)
-const otpStore = new Map<string, { code: string; expiresAt: number }>();
-
-authRouter.post('/request-otp', (req: Request, res: Response) => {
+authRouter.post('/request-otp', async (req: Request, res: Response) => {
   const parsed = RequestOtpSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Validation Error', details: parsed.error.format() });
@@ -18,15 +16,14 @@ authRouter.post('/request-otp', (req: Request, res: Response) => {
   }
 
   const { phone } = parsed.data;
-  const code = env.DEV_OTP_ENABLED ? env.DEV_OTP_DEFAULT_CODE : Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 5 * 60 * 1000; // 5 min expiry
-
-  otpStore.set(phone, { code, expiresAt });
+  const result = await SmsService.sendOtp(phone);
 
   res.status(200).json({
-    message: 'OTP sent successfully',
+    message: 'OTP sent successfully to registered mobile number',
     phone,
     isDevMode: env.DEV_OTP_ENABLED,
+    expiresAt: result.expiresAt,
+    provider: result.provider,
   });
 });
 
@@ -38,14 +35,10 @@ authRouter.post('/verify-otp', async (req: Request, res: Response) => {
   }
 
   const { phone, otp } = parsed.data;
-  const stored = otpStore.get(phone);
+  const verification = await SmsService.verifyOtp(phone, otp);
 
-  const isValid =
-    (env.DEV_OTP_ENABLED && otp === env.DEV_OTP_DEFAULT_CODE) ||
-    (stored && stored.code === otp && stored.expiresAt > Date.now());
-
-  if (!isValid) {
-    res.status(401).json({ error: 'Unauthorized', message: 'Invalid or expired OTP' });
+  if (!verification.isValid) {
+    res.status(401).json({ error: 'Unauthorized', message: verification.reason || 'Invalid or expired OTP' });
     return;
   }
 
