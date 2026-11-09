@@ -7,6 +7,7 @@
       "flatNumber": "1203",
       "residentName": "Neeraj Kulkarni",
       "residentPhone": "9820000001",
+      "residentUpi": "neeraj@oksbi",
       "billingPeriod": "2026-11",
       "areaSqFt": 1150,
       "ratePerSqFtPaise": 650,
@@ -26,6 +27,7 @@
       "flatNumber": "0408",
       "residentName": "Swati Joshi",
       "residentPhone": "9820000002",
+      "residentUpi": null,
       "billingPeriod": "2026-11",
       "areaSqFt": 980,
       "ratePerSqFtPaise": 650,
@@ -45,6 +47,7 @@
       "flatNumber": "1601",
       "residentName": "Aamir Shaikh",
       "residentPhone": "9820000003",
+      "residentUpi": null,
       "billingPeriod": "2026-11",
       "areaSqFt": 1640,
       "ratePerSqFtPaise": 650,
@@ -86,32 +89,32 @@
       "receiptId": "rec-seed-02"
     },
     {
-      "id": "pay-1794219162376",
+      "id": "pay-1794222256138",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "amountPaise": 699000,
-      "idempotencyKey": "persist-test-1794219162369",
+      "idempotencyKey": "persist-test-1794222256134",
       "provider": "MOCK_GATEWAY",
-      "providerReference": "MOCK-UPI-161774",
+      "providerReference": "MOCK-UPI-348499",
       "status": "SUCCESS",
-      "createdAt": "2026-11-09T10:12:42.376Z",
-      "receiptId": "rec-1794219162378",
-      "paidAt": "2026-11-09T10:12:42.378Z"
+      "createdAt": "2026-11-09T11:04:16.138Z",
+      "receiptId": "rec-1794222256140",
+      "paidAt": "2026-11-09T11:04:16.140Z"
     }
   ],
   "receipts": [
     {
-      "id": "rec-1794219162378",
+      "id": "rec-1794222256140",
       "receiptNumber": "REC-202611-0003",
-      "paymentId": "pay-1794219162376",
+      "paymentId": "pay-1794222256138",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "flatIdentifier": "T12-0408",
       "residentName": "Swati Joshi",
       "billingPeriod": "November 2026",
       "amountPaise": 699000,
-      "paymentReference": "MOCK-UPI-161774",
-      "date": "2026-11-09T10:12:42.378Z"
+      "paymentReference": "MOCK-UPI-348499",
+      "date": "2026-11-09T11:04:16.140Z"
     },
     {
       "id": "rec-seed-01",
@@ -200,13 +203,125 @@
       "createdAt": "2026-11-03T11:02:00Z"
     },
     {
-      "id": "led-1794219162381",
+      "id": "led-1794222256143",
       "flatId": "flat-t12-0408",
       "entryType": "PAYMENT",
       "amountPaise": 699000,
-      "description": "Online Payment (Ref: MOCK-UPI-161774)",
-      "reference": "MOCK-UPI-161774",
-      "createdAt": "2026-11-09T10:12:42.378Z"
+      "description": "Online Payment (Ref: MOCK-UPI-348499)",
+      "reference": "MOCK-UPI-348499",
+      "createdAt": "2026-11-09T11:04:16.140Z"
+    }
+  ],
+  "bankBatches": [
+    {
+      "id": "batch-seed-01",
+      "filename": "sample_bank_statement.csv",
+      "fileHash": "seed-hash-01",
+      "uploadedAt": "2026-11-02T10:00:00Z",
+      "totalRows": 4,
+      "processedRows": 4,
+      "duplicateRows": 1,
+      "invalidRows": 0,
+      "rowErrors": []
+    }
+  ],
+  "bankTransactions": [
+    {
+      "id": "txn-seed-1",
+      "transaction": {
+        "id": "txn-seed-1",
+        "rowNumber": 2,
+        "rawRow": "2026-11-02,7475.00,UPI20261102001,neeraj@oksbi,Maintenance payment for T07-1203 Neeraj Kulkarni",
+        "transactionDate": "2026-11-02T10:15:00.000Z",
+        "amountPaise": 747500,
+        "reference": "UPI20261102001",
+        "upiId": "neeraj@oksbi",
+        "description": "Maintenance payment for T07-1203 Neeraj Kulkarni",
+        "isDuplicateInBatch": false
+      },
+      "status": "SUGGESTED",
+      "suggestedMatch": {
+        "invoiceId": "inv-t07-1203-202611",
+        "candidateInvoice": {
+          "id": "inv-t07-1203-202611",
+          "flatId": "flat-t07-1203",
+          "tower": "T07",
+          "flatNumber": "1203",
+          "residentName": "Neeraj Kulkarni",
+          "residentUpi": "neeraj@oksbi",
+          "totalAmountPaise": 747500,
+          "paidAmountPaise": 0,
+          "balancePaise": 747500,
+          "dueDate": "2026-11-10T00:00:00Z",
+          "status": "ISSUED"
+        },
+        "candidateFlat": {
+          "flatId": "flat-t07-1203",
+          "tower": "T07",
+          "flatNumber": "1203",
+          "residentName": "Neeraj Kulkarni"
+        },
+        "confidence": 0.95,
+        "matchingReasons": [
+          "Exact flat code \"T07-1203\" found in narration (+35 pts)",
+          "Exact amount match: ₹7475.00 (+25 pts)",
+          "Resident name \"Neeraj Kulkarni\" found in narration (+20 pts)",
+          "Registered resident UPI ID match: \"neeraj@oksbi\" (+15 pts)"
+        ],
+        "missingEvidence": [
+          "Missing: Transaction date outside invoice month"
+        ]
+      },
+      "alternativeMatches": [],
+      "isAmbiguous": false
+    },
+    {
+      "id": "txn-seed-2",
+      "transaction": {
+        "id": "txn-seed-2",
+        "rowNumber": 3,
+        "rawRow": "2026-11-03,6370.00,NEFT20261103002,,Axis Bank transfer Swati rent",
+        "transactionDate": "2026-11-03T16:45:00.000Z",
+        "amountPaise": 637000,
+        "reference": "NEFT20261103002",
+        "upiId": null,
+        "description": "Axis Bank transfer Swati rent",
+        "isDuplicateInBatch": false
+      },
+      "status": "NEEDS_REVIEW",
+      "suggestedMatch": {
+        "invoiceId": "inv-t12-0408-202611",
+        "candidateInvoice": {
+          "id": "inv-t12-0408-202611",
+          "flatId": "flat-t12-0408",
+          "tower": "T12",
+          "flatNumber": "0408",
+          "residentName": "Swati Joshi",
+          "residentUpi": null,
+          "totalAmountPaise": 699000,
+          "paidAmountPaise": 0,
+          "balancePaise": 699000,
+          "dueDate": "2026-09-24T00:00:00Z",
+          "status": "OVERDUE"
+        },
+        "candidateFlat": {
+          "flatId": "flat-t12-0408",
+          "tower": "T12",
+          "flatNumber": "0408",
+          "residentName": "Swati Joshi"
+        },
+        "confidence": 0.45,
+        "matchingReasons": [
+          "Resident name \"Swati Joshi\" found in narration (+20 pts)"
+        ],
+        "missingEvidence": [
+          "Missing: Flat identifier (T12-0408) not found in narration",
+          "Missing: Amount (₹6370.00) does not match invoice balance (₹6990.00)",
+          "Missing: Registered resident UPI ID match"
+        ]
+      },
+      "alternativeMatches": [],
+      "isAmbiguous": true
     }
   ]
 }

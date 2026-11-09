@@ -82,3 +82,4 @@ describe('Financial Persistence Across Reloads', () => {
     expect(reloadedLedger.body.closingBalancePaise).toBe(0);
   });
 });
+

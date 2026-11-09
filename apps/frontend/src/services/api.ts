@@ -190,4 +190,115 @@ export class ApiClient {
       body: JSON.stringify({ idempotencyKey, outcome, simulateFailure }),
     });
   }
+
+  // Reconciliation API
+  public static async authenticateStaff(): Promise<string> {
+    return this.authenticateResident('9876543211'); // Accounts Officer Pooja Mehta
+  }
+
+  public static async getReconciliationQueue(status?: string): Promise<{ queue: ApiReconciledTransaction[] }> {
+    const query = status && status !== 'ALL' ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request<{ queue: ApiReconciledTransaction[] }>(`/reconciliation/queue${query}`);
+  }
+
+  public static async getReconciliationBatches(): Promise<{ batches: ApiBatchSummary[] }> {
+    return this.request<{ batches: ApiBatchSummary[] }>('/reconciliation/batches');
+  }
+
+  public static async searchCandidates(query?: string): Promise<{ candidates: any[] }> {
+    const q = query ? `?q=${encodeURIComponent(query)}` : '';
+    return this.request<{ candidates: any[] }>(`/reconciliation/candidates${q}`);
+  }
+
+  public static async uploadBankCsv(
+    csvContent: string,
+    filename: string = 'bank_statement.csv'
+  ): Promise<{
+    message: string;
+    batch: ApiBatchSummary;
+    reconciledQueue: ApiReconciledTransaction[];
+    summary: {
+      totalRows: number;
+      validRows: number;
+      duplicateRows: number;
+      invalidRows: number;
+      suggestedCount: number;
+      needsReviewCount: number;
+      unmatchedCount: number;
+    };
+  }> {
+    return this.request('/reconciliation/upload', {
+      method: 'POST',
+      body: JSON.stringify({ csvContent, filename }),
+    });
+  }
+
+  public static async confirmReconciliationMatch(txnId: string, invoiceId?: string): Promise<any> {
+    return this.request(`/reconciliation/transactions/${encodeURIComponent(txnId)}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ invoiceId }),
+    });
+  }
+
+  public static async rejectReconciliationMatch(txnId: string, reason?: string): Promise<any> {
+    return this.request(`/reconciliation/transactions/${encodeURIComponent(txnId)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  }
+
+  public static async markReconciliationReview(txnId: string): Promise<any> {
+    return this.request(`/reconciliation/transactions/${encodeURIComponent(txnId)}/review`, {
+      method: 'POST',
+    });
+  }
 }
+
+export interface ApiReconciledTransaction {
+  id: string;
+  transaction: {
+    id: string;
+    rowNumber: number;
+    rawRow: string;
+    transactionDate: string;
+    amountPaise: number;
+    reference: string;
+    upiId: string | null;
+    description: string;
+    isDuplicateInBatch: boolean;
+  };
+  status: 'UNMATCHED' | 'SUGGESTED' | 'NEEDS_REVIEW' | 'MATCHED' | 'POSTED' | 'DUPLICATE' | 'REJECTED';
+  suggestedMatch: {
+    invoiceId: string;
+    flatIdentifier: string;
+    candidateInvoice: any;
+    candidateFlat: {
+      flatId: string;
+      tower: string;
+      flatNumber: string;
+      residentName: string;
+    };
+    confidence: number;
+    matchingReasons: string[];
+    missingEvidence: string[];
+  } | null;
+  alternativeMatches: any[];
+  isAmbiguous: boolean;
+  selectedInvoiceId?: string | null;
+  postedPaymentId?: string | null;
+  postedAt?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface ApiBatchSummary {
+  id: string;
+  filename: string;
+  fileHash: string;
+  uploadedAt: string;
+  totalRows: number;
+  processedRows: number;
+  duplicateRows: number;
+  invalidRows: number;
+  rowErrors: Array<{ line: number; message: string; rawRow: string }>;
+}
+
