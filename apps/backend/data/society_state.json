@@ -89,32 +89,32 @@
       "receiptId": "rec-seed-02"
     },
     {
-      "id": "pay-1794225399550",
+      "id": "pay-1794227646730",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "amountPaise": 699000,
-      "idempotencyKey": "persist-test-1794225399541",
+      "idempotencyKey": "persist-test-1794227646726",
       "provider": "MOCK_GATEWAY",
-      "providerReference": "MOCK-UPI-869138",
+      "providerReference": "MOCK-UPI-910276",
       "status": "SUCCESS",
-      "createdAt": "2026-11-09T11:56:39.550Z",
-      "receiptId": "rec-1794225399553",
-      "paidAt": "2026-11-09T11:56:39.553Z"
+      "createdAt": "2026-11-09T12:34:06.730Z",
+      "receiptId": "rec-1794227646733",
+      "paidAt": "2026-11-09T12:34:06.733Z"
     }
   ],
   "receipts": [
     {
-      "id": "rec-1794225399553",
+      "id": "rec-1794227646733",
       "receiptNumber": "REC-202611-0003",
-      "paymentId": "pay-1794225399550",
+      "paymentId": "pay-1794227646730",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "flatIdentifier": "T12-0408",
       "residentName": "Swati Joshi",
       "billingPeriod": "November 2026",
       "amountPaise": 699000,
-      "paymentReference": "MOCK-UPI-869138",
-      "date": "2026-11-09T11:56:39.553Z"
+      "paymentReference": "MOCK-UPI-910276",
+      "date": "2026-11-09T12:34:06.733Z"
     },
     {
       "id": "rec-seed-01",
@@ -203,13 +203,13 @@
       "createdAt": "2026-11-03T11:02:00Z"
     },
     {
-      "id": "led-1794225399556",
+      "id": "led-1794227646736",
       "flatId": "flat-t12-0408",
       "entryType": "PAYMENT",
       "amountPaise": 699000,
-      "description": "Online Payment (Ref: MOCK-UPI-869138)",
-      "reference": "MOCK-UPI-869138",
-      "createdAt": "2026-11-09T11:56:39.553Z"
+      "description": "Online Payment (Ref: MOCK-UPI-910276)",
+      "reference": "MOCK-UPI-910276",
+      "createdAt": "2026-11-09T12:34:06.733Z"
     }
   ],
   "bankBatches": [

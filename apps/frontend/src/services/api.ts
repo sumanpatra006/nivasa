@@ -1,3 +1,5 @@
+import { CommitteeDashboardMetrics } from '@nivasa/shared';
+
 export interface ApiInvoice {
   id: string;
   flatId: string;
@@ -359,6 +361,34 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify({ candidateId, reason }),
     });
+  }
+
+  // Committee Oversight & Reporting API
+  public static async authenticateCommittee(phone: string = '9876543212'): Promise<string> {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp: '123456' }),
+    });
+    if (!res.ok) throw new Error('Committee authentication failed');
+    const data = await res.json();
+    this.setToken(data.token);
+    return data.token;
+  }
+
+  public static async getCommitteeDashboard(period?: string): Promise<CommitteeDashboardMetrics> {
+    const query = period && period !== 'ALL' ? `?period=${encodeURIComponent(period)}` : '';
+    return this.request<CommitteeDashboardMetrics>(`/dashboard/committee${query}`);
+  }
+
+  public static async downloadMonthlyCollectionCsv(period?: string): Promise<string> {
+    const token = this.getToken();
+    const query = period && period !== 'ALL' ? `?period=${encodeURIComponent(period)}` : '';
+    const res = await fetch(`${API_BASE_URL}/dashboard/reports/monthly-collection${query}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error(`Download failed: ${res.statusText}`);
+    return res.text();
   }
 }
 

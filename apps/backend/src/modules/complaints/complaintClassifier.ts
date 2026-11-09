@@ -167,3 +167,4 @@ Respond with JSON matching: { "category": "PLUMBING"|"ELECTRICAL"|"LIFT"|"SECURI
 }
 
 export const complaintClassifier = new DefaultComplaintClassifier();
+

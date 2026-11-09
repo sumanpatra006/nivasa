@@ -81,3 +81,81 @@ export interface BankTransactionDTO {
   status: BankTransactionStatus;
 }
 
+// Committee Dashboard Reporting Types
+export interface DuesAgeingBucket {
+  key: 'CURRENT' | 'DAYS_1_30' | 'DAYS_31_60' | 'DAYS_61_90' | 'DAYS_90_PLUS';
+  label: string;
+  dayRange: string;
+  count: number;
+  amountPaise: number;
+  percentageOfOutstanding: number;
+  color: string;
+}
+
+export interface FlatOutstandingAccount {
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  residentName: string;
+  residentPhone?: string;
+  billingPeriod: string;
+  totalBilledPaise: number;
+  paidAmountPaise: number;
+  outstandingBalancePaise: number;
+  daysOverdue: number;
+  ageingBucket: string;
+  status: string;
+}
+
+export interface CommitteeDashboardMetrics {
+  currentBillingPeriod: string;
+  generatedAt: string;
+  summary: {
+    totalApartments: number;
+    totalTowers: number;
+    totalBilledPaise: number;
+    totalCollectedPaise: number;
+    totalOverduePaise: number;
+    collectionEfficiencyPct: number;
+  };
+  financialMetrics: {
+    totalBilledPaise: number;
+    totalCollectedPaise: number;
+    outstandingBalancePaise: number;
+    collectionPercentage: number;
+    invoicesCount: number;
+    paidInvoicesCount: number;
+    partiallyPaidInvoicesCount: number;
+    overdueInvoicesCount: number;
+  };
+  duesAgeing: {
+    definitionNotice: string;
+    totalOutstandingPaise: number;
+    buckets: DuesAgeingBucket[];
+  };
+  flatOutstandingAccounts: FlatOutstandingAccount[];
+  complaintMetrics: {
+    totalComplaints: number;
+    openComplaints: number;
+    resolvedComplaints: number;
+    reopenedCount: number;
+    reopenedRatePct: number;
+    averageResponseTimeMinutes: number | null;
+    averageResolutionTimeHours: number | null;
+    calculationDocumentation: {
+      responseTimeFormula: string;
+      resolutionTimeFormula: string;
+      reopenedRateFormula: string;
+      disclaimer: string;
+    };
+  };
+  disclosures: {
+    isSampleData: boolean;
+    sampleAccountsCount: number;
+    townshipTotalFlats: number;
+    historicalDataAvailable: boolean;
+    operationalImprovementClaimed: boolean;
+    notes: string[];
+  };
+}
+
