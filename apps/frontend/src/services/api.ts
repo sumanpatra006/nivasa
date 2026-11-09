@@ -192,7 +192,7 @@ export class ApiClient {
   }
 
   // Reconciliation API
-  public static async authenticateStaff(): Promise<string> {
+  public static async authenticateAccountsStaff(): Promise<string> {
     return this.authenticateResident('9876543211'); // Accounts Officer Pooja Mehta
   }
 
@@ -252,6 +252,114 @@ export class ApiClient {
       method: 'POST',
     });
   }
+
+  public static async authenticateStaff(phone: string = '9876543210'): Promise<string> {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp: '123456' }),
+    });
+    if (!res.ok) throw new Error('Staff authentication failed');
+    const data = await res.json();
+    this.setToken(data.token);
+    return data.token;
+  }
+
+  public static async getComplaints(filters?: {
+    category?: string;
+    urgency?: string;
+    status?: string;
+    search?: string;
+  }): Promise<{ complaints: ApiComplaint[] }> {
+    const params = new URLSearchParams();
+    if (filters?.category && filters.category !== 'ALL') params.append('category', filters.category);
+    if (filters?.urgency && filters.urgency !== 'ALL') params.append('urgency', filters.urgency);
+    if (filters?.status && filters.status !== 'ALL') params.append('status', filters.status);
+    if (filters?.search) params.append('search', filters.search);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return this.request<{ complaints: ApiComplaint[] }>(`/complaints${query}`);
+  }
+
+  public static async getComplaint(id: string): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>(`/complaints/${encodeURIComponent(id)}`);
+  }
+
+  public static async createComplaint(payload: {
+    flatId: string;
+    title: string;
+    description: string;
+    category?: string;
+    photoUrl?: string;
+  }): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>('/complaints', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public static async updateComplaintStatus(
+    id: string,
+    status: string,
+    comment?: string
+  ): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>(`/complaints/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, comment }),
+    });
+  }
+
+  public static async assignComplaint(
+    id: string,
+    assignedTo: string,
+    reason?: string
+  ): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>(`/complaints/${encodeURIComponent(id)}/assignment`, {
+      method: 'PATCH',
+      body: JSON.stringify({ assignedTo, reason }),
+    });
+  }
+
+  public static async correctComplaint(
+    id: string,
+    payload: { category?: string; urgency?: string; reason?: string }
+  ): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>(`/complaints/${encodeURIComponent(id)}/correction`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  public static async rateComplaint(
+    id: string,
+    stars: number,
+    feedback?: string
+  ): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>(`/complaints/${encodeURIComponent(id)}/rate`, {
+      method: 'POST',
+      body: JSON.stringify({ stars, feedback }),
+    });
+  }
+
+  public static async linkDuplicateComplaint(
+    id: string,
+    duplicateId: string
+  ): Promise<{ message: string; primary: ApiComplaint; duplicate: ApiComplaint }> {
+    return this.request(`/complaints/${encodeURIComponent(id)}/link-duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ duplicateId }),
+    });
+  }
+
+  public static async rejectDuplicateComplaint(
+    id: string,
+    candidateId: string,
+    reason?: string
+  ): Promise<{ complaint: ApiComplaint }> {
+    return this.request<{ complaint: ApiComplaint }>(`/complaints/${encodeURIComponent(id)}/reject-duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ candidateId, reason }),
+    });
+  }
 }
 
 export interface ApiReconciledTransaction {
@@ -300,5 +408,66 @@ export interface ApiBatchSummary {
   duplicateRows: number;
   invalidRows: number;
   rowErrors: Array<{ line: number; message: string; rawRow: string }>;
+}
+
+export interface ApiComplaint {
+  id: string;
+  residentId: string;
+  residentName: string;
+  residentPhone?: string;
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  title: string;
+  description: string;
+  category: string;
+  urgency: string;
+  status: string;
+  assignedTo?: string | null;
+  photoUrl?: string | null;
+  rating?: {
+    stars: number;
+    feedback?: string;
+    ratedAt: string;
+  } | null;
+  isSafetyEscalation: boolean;
+  safetyReason?: string | null;
+  dutyManagerAlerted: boolean;
+  isAiFallback: boolean;
+  aiConfidence?: number;
+  aiSuggestedTeam?: string;
+  aiExplanation?: string;
+  duplicateOfId?: string | null;
+  duplicateLinks: string[];
+  duplicateSuggestions: Array<{
+    candidateId: string;
+    candidateTitle: string;
+    candidateFlat: string;
+    candidateStatus: string;
+    confidence: number;
+    matchingFactors: string[];
+  }>;
+  reopenCount: number;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string | null;
+  resolutionComment?: string | null;
+  sla?: {
+    elapsedMinutes: number;
+    responseTargetMinutes: number;
+    resolutionTargetMinutes: number;
+    isBreached: boolean;
+    isEscalated: boolean;
+    slaStatus: string;
+    remainingMinutes: number;
+    displayRemaining: string;
+  };
+  slaTimeRemaining?: string;
+  timeline: Array<{
+    id: string;
+    message: string;
+    actor?: string;
+    createdAt: string;
+  }>;
 }
 

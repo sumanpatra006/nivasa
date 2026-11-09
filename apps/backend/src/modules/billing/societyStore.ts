@@ -1,7 +1,72 @@
 import fs from 'fs';
 import path from 'path';
-import { calculateMaintenancePaise, calculateLateFeePaise } from '@nivasa/shared';
+import {
+  calculateMaintenancePaise,
+  calculateLateFeePaise,
+  ComplaintCategory,
+  ComplaintUrgency,
+  ComplaintStatus,
+  COMPLAINT_CATEGORY,
+  COMPLAINT_URGENCY,
+  COMPLAINT_STATUS,
+} from '@nivasa/shared';
 import type { ReconciledTransaction } from '../reconciliation/reconciliationEngine.js';
+
+export interface ComplaintRating {
+  stars: number;
+  feedback?: string;
+  ratedAt: string;
+}
+
+export interface ComplaintDuplicateSuggestion {
+  candidateId: string;
+  candidateTitle: string;
+  candidateFlat: string;
+  candidateStatus: string;
+  confidence: number;
+  matchingFactors: string[];
+}
+
+export interface ComplaintRecord {
+  id: string;
+  residentId: string;
+  residentName: string;
+  residentPhone?: string;
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  title: string;
+  description: string;
+  category: ComplaintCategory;
+  originalCategory?: ComplaintCategory;
+  urgency: ComplaintUrgency;
+  originalUrgency?: ComplaintUrgency;
+  status: ComplaintStatus;
+  assignedTo?: string | null;
+  photoUrl?: string | null;
+  rating?: ComplaintRating | null;
+  isSafetyEscalation: boolean;
+  safetyReason?: string | null;
+  dutyManagerAlerted: boolean;
+  isAiFallback: boolean;
+  aiConfidence?: number;
+  aiSuggestedTeam?: string;
+  aiExplanation?: string;
+  duplicateOfId?: string | null;
+  duplicateLinks: string[];
+  duplicateSuggestions: ComplaintDuplicateSuggestion[];
+  reopenCount: number;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string | null;
+  resolutionComment?: string | null;
+  timeline: Array<{
+    id: string;
+    message: string;
+    actor?: string;
+    createdAt: string;
+  }>;
+}
 
 export interface InvoiceRecord {
   id: string;
@@ -82,6 +147,7 @@ export interface SocietyState {
   ledger: LedgerEntryRecord[];
   bankBatches: BankImportBatchRecord[];
   bankTransactions: ReconciledTransaction[];
+  complaints: ComplaintRecord[];
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -387,6 +453,103 @@ export function getInitialSeedState(): SocietyState {
     },
   ];
 
+  const initialComplaints: ComplaintRecord[] = [
+    {
+      id: 'cmp-01',
+      residentId: 'user-9820000002',
+      residentName: 'Swati Joshi',
+      residentPhone: '9820000002',
+      flatId: 'flat-t12-0408',
+      tower: 'T12',
+      flatNumber: '0408',
+      title: 'Water leakage in master bathroom',
+      description: 'Continuous slow drip under the washbasin pipe damaging wooden cabinet.',
+      category: COMPLAINT_CATEGORY.PLUMBING,
+      urgency: COMPLAINT_URGENCY.NORMAL,
+      status: COMPLAINT_STATUS.ASSIGNED,
+      assignedTo: 'Plumbing Duty Team (Santosh Shinde)',
+      photoUrl: null,
+      rating: null,
+      isSafetyEscalation: false,
+      safetyReason: null,
+      dutyManagerAlerted: false,
+      isAiFallback: true,
+      aiConfidence: 0.88,
+      aiSuggestedTeam: 'Plumbing Duty Team (Santosh Shinde)',
+      aiExplanation: 'Deterministic rule-based classification matched keywords: [water, leak, pipe, washbasin].',
+      duplicateOfId: null,
+      duplicateLinks: [],
+      duplicateSuggestions: [],
+      reopenCount: 0,
+      createdAt: '2026-11-01T08:30:00Z',
+      updatedAt: '2026-11-01T09:15:00Z',
+      timeline: [
+        {
+          id: 'tl-cmp1-1',
+          message: 'Complaint registered by resident Swati Joshi',
+          actor: 'Swati Joshi',
+          createdAt: '2026-11-01T08:30:00Z',
+        },
+        {
+          id: 'tl-cmp1-2',
+          message: 'Assigned to Plumbing Duty Team (Santosh Shinde) by Ramesh Sawant',
+          actor: 'Ramesh Sawant',
+          createdAt: '2026-11-01T09:15:00Z',
+        },
+      ],
+    },
+    {
+      id: 'cmp-02',
+      residentId: 'user-9820000001',
+      residentName: 'Neeraj Kulkarni',
+      residentPhone: '9820000001',
+      flatId: 'flat-t07-1203',
+      tower: 'T07',
+      flatNumber: '1203',
+      title: 'Emergency: Lift #2 stuck between 8th and 9th floor',
+      description: 'Passenger elevator stopped abruptly with passengers inside. Emergency alarm sounding.',
+      category: COMPLAINT_CATEGORY.LIFT,
+      urgency: COMPLAINT_URGENCY.CRITICAL,
+      status: COMPLAINT_STATUS.ASSIGNED,
+      assignedTo: 'Lift Emergency Tech (OTIS)',
+      photoUrl: null,
+      rating: null,
+      isSafetyEscalation: true,
+      safetyReason: 'Automated safety override triggered due to matching safety indicators: [lift stuck]',
+      dutyManagerAlerted: true,
+      isAiFallback: true,
+      aiConfidence: 0.95,
+      aiSuggestedTeam: 'Lift Emergency Tech (OTIS)',
+      aiExplanation: 'Emergency safety classifier triggered critical escalation.',
+      duplicateOfId: null,
+      duplicateLinks: [],
+      duplicateSuggestions: [],
+      reopenCount: 0,
+      createdAt: '2026-11-03T10:00:00Z',
+      updatedAt: '2026-11-03T10:05:00Z',
+      timeline: [
+        {
+          id: 'tl-cmp2-1',
+          message: 'Emergency ticket registered by resident Neeraj Kulkarni',
+          actor: 'Neeraj Kulkarni',
+          createdAt: '2026-11-03T10:00:00Z',
+        },
+        {
+          id: 'tl-cmp2-2',
+          message: 'AUTOMATED SAFETY ESCALATION TRIGGERED: lift stuck. Duty Manager alerted for immediate dispatch.',
+          actor: 'System Safety Monitor',
+          createdAt: '2026-11-03T10:00:01Z',
+        },
+        {
+          id: 'tl-cmp2-3',
+          message: 'Dispatched to OTIS Lift Emergency Tech by Ramesh Sawant',
+          actor: 'Ramesh Sawant',
+          createdAt: '2026-11-03T10:05:00Z',
+        },
+      ],
+    },
+  ];
+
   return {
     invoices,
     payments,
@@ -406,6 +569,7 @@ export function getInitialSeedState(): SocietyState {
       },
     ],
     bankTransactions: initialBankTransactions,
+    complaints: initialComplaints,
   };
 }
 
@@ -422,6 +586,9 @@ class SocietyStore {
         const raw = fs.readFileSync(STATE_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         if (parsed.bankBatches && parsed.bankTransactions) {
+          if (!parsed.complaints || !Array.isArray(parsed.complaints)) {
+            parsed.complaints = getInitialSeedState().complaints;
+          }
           return parsed;
         }
       }
@@ -647,6 +814,31 @@ class SocietyStore {
     this.saveToDisk(this.state);
 
     return { transaction: txn, invoice, payment, receipt, ledgerEntry };
+  }
+
+  // Complaints Access and Mutation Methods
+  public getComplaints(): ComplaintRecord[] {
+    return this.state.complaints;
+  }
+
+  public getComplaintById(id: string): ComplaintRecord | undefined {
+    return this.state.complaints.find((c) => c.id === id);
+  }
+
+  public addComplaint(complaint: ComplaintRecord): ComplaintRecord {
+    this.state.complaints.unshift(complaint);
+    this.saveToDisk(this.state);
+    return complaint;
+  }
+
+  public updateComplaint(id: string, updates: Partial<ComplaintRecord>): ComplaintRecord {
+    const complaint = this.state.complaints.find((c) => c.id === id);
+    if (!complaint) {
+      throw new Error(`Complaint ${id} not found.`);
+    }
+    Object.assign(complaint, updates, { updatedAt: new Date().toISOString() });
+    this.saveToDisk(this.state);
+    return complaint;
   }
 }
 

@@ -89,32 +89,32 @@
       "receiptId": "rec-seed-02"
     },
     {
-      "id": "pay-1794222256138",
+      "id": "pay-1794225399550",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "amountPaise": 699000,
-      "idempotencyKey": "persist-test-1794222256134",
+      "idempotencyKey": "persist-test-1794225399541",
       "provider": "MOCK_GATEWAY",
-      "providerReference": "MOCK-UPI-348499",
+      "providerReference": "MOCK-UPI-869138",
       "status": "SUCCESS",
-      "createdAt": "2026-11-09T11:04:16.138Z",
-      "receiptId": "rec-1794222256140",
-      "paidAt": "2026-11-09T11:04:16.140Z"
+      "createdAt": "2026-11-09T11:56:39.550Z",
+      "receiptId": "rec-1794225399553",
+      "paidAt": "2026-11-09T11:56:39.553Z"
     }
   ],
   "receipts": [
     {
-      "id": "rec-1794222256140",
+      "id": "rec-1794225399553",
       "receiptNumber": "REC-202611-0003",
-      "paymentId": "pay-1794222256138",
+      "paymentId": "pay-1794225399550",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "flatIdentifier": "T12-0408",
       "residentName": "Swati Joshi",
       "billingPeriod": "November 2026",
       "amountPaise": 699000,
-      "paymentReference": "MOCK-UPI-348499",
-      "date": "2026-11-09T11:04:16.140Z"
+      "paymentReference": "MOCK-UPI-869138",
+      "date": "2026-11-09T11:56:39.553Z"
     },
     {
       "id": "rec-seed-01",
@@ -203,13 +203,13 @@
       "createdAt": "2026-11-03T11:02:00Z"
     },
     {
-      "id": "led-1794222256143",
+      "id": "led-1794225399556",
       "flatId": "flat-t12-0408",
       "entryType": "PAYMENT",
       "amountPaise": 699000,
-      "description": "Online Payment (Ref: MOCK-UPI-348499)",
-      "reference": "MOCK-UPI-348499",
-      "createdAt": "2026-11-09T11:04:16.140Z"
+      "description": "Online Payment (Ref: MOCK-UPI-869138)",
+      "reference": "MOCK-UPI-869138",
+      "createdAt": "2026-11-09T11:56:39.553Z"
     }
   ],
   "bankBatches": [
@@ -242,6 +242,7 @@
       "status": "SUGGESTED",
       "suggestedMatch": {
         "invoiceId": "inv-t07-1203-202611",
+        "flatIdentifier": "T07-1203",
         "candidateInvoice": {
           "id": "inv-t07-1203-202611",
           "flatId": "flat-t07-1203",
@@ -291,6 +292,7 @@
       "status": "NEEDS_REVIEW",
       "suggestedMatch": {
         "invoiceId": "inv-t12-0408-202611",
+        "flatIdentifier": "T12-0408",
         "candidateInvoice": {
           "id": "inv-t12-0408-202611",
           "flatId": "flat-t12-0408",
@@ -322,6 +324,102 @@
       },
       "alternativeMatches": [],
       "isAmbiguous": true
+    }
+  ],
+  "complaints": [
+    {
+      "id": "cmp-01",
+      "residentId": "user-9820000002",
+      "residentName": "Swati Joshi",
+      "residentPhone": "9820000002",
+      "flatId": "flat-t12-0408",
+      "tower": "T12",
+      "flatNumber": "0408",
+      "title": "Water leakage in master bathroom",
+      "description": "Continuous slow drip under the washbasin pipe damaging wooden cabinet.",
+      "category": "PLUMBING",
+      "urgency": "NORMAL",
+      "status": "ASSIGNED",
+      "assignedTo": "Plumbing Duty Team (Santosh Shinde)",
+      "photoUrl": null,
+      "rating": null,
+      "isSafetyEscalation": false,
+      "safetyReason": null,
+      "dutyManagerAlerted": false,
+      "isAiFallback": true,
+      "aiConfidence": 0.88,
+      "aiSuggestedTeam": "Plumbing Duty Team (Santosh Shinde)",
+      "aiExplanation": "Deterministic rule-based classification matched keywords: [water, leak, pipe, washbasin].",
+      "duplicateOfId": null,
+      "duplicateLinks": [],
+      "duplicateSuggestions": [],
+      "reopenCount": 0,
+      "createdAt": "2026-11-01T08:30:00Z",
+      "updatedAt": "2026-11-01T09:15:00Z",
+      "timeline": [
+        {
+          "id": "tl-cmp1-1",
+          "message": "Complaint registered by resident Swati Joshi",
+          "actor": "Swati Joshi",
+          "createdAt": "2026-11-01T08:30:00Z"
+        },
+        {
+          "id": "tl-cmp1-2",
+          "message": "Assigned to Plumbing Duty Team (Santosh Shinde) by Ramesh Sawant",
+          "actor": "Ramesh Sawant",
+          "createdAt": "2026-11-01T09:15:00Z"
+        }
+      ]
+    },
+    {
+      "id": "cmp-02",
+      "residentId": "user-9820000001",
+      "residentName": "Neeraj Kulkarni",
+      "residentPhone": "9820000001",
+      "flatId": "flat-t07-1203",
+      "tower": "T07",
+      "flatNumber": "1203",
+      "title": "Emergency: Lift #2 stuck between 8th and 9th floor",
+      "description": "Passenger elevator stopped abruptly with passengers inside. Emergency alarm sounding.",
+      "category": "LIFT",
+      "urgency": "CRITICAL",
+      "status": "ASSIGNED",
+      "assignedTo": "Lift Emergency Tech (OTIS)",
+      "photoUrl": null,
+      "rating": null,
+      "isSafetyEscalation": true,
+      "safetyReason": "Automated safety override triggered due to matching safety indicators: [lift stuck]",
+      "dutyManagerAlerted": true,
+      "isAiFallback": true,
+      "aiConfidence": 0.95,
+      "aiSuggestedTeam": "Lift Emergency Tech (OTIS)",
+      "aiExplanation": "Emergency safety classifier triggered critical escalation.",
+      "duplicateOfId": null,
+      "duplicateLinks": [],
+      "duplicateSuggestions": [],
+      "reopenCount": 0,
+      "createdAt": "2026-11-03T10:00:00Z",
+      "updatedAt": "2026-11-03T10:05:00Z",
+      "timeline": [
+        {
+          "id": "tl-cmp2-1",
+          "message": "Emergency ticket registered by resident Neeraj Kulkarni",
+          "actor": "Neeraj Kulkarni",
+          "createdAt": "2026-11-03T10:00:00Z"
+        },
+        {
+          "id": "tl-cmp2-2",
+          "message": "AUTOMATED SAFETY ESCALATION TRIGGERED: lift stuck. Duty Manager alerted for immediate dispatch.",
+          "actor": "System Safety Monitor",
+          "createdAt": "2026-11-03T10:00:01Z"
+        },
+        {
+          "id": "tl-cmp2-3",
+          "message": "Dispatched to OTIS Lift Emergency Tech by Ramesh Sawant",
+          "actor": "Ramesh Sawant",
+          "createdAt": "2026-11-03T10:05:00Z"
+        }
+      ]
     }
   ]
 }
