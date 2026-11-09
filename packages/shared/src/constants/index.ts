@@ -114,3 +114,30 @@ export const SAFETY_ESCALATION_TERMS = [
   'short circuit',
 ] as const;
 
+export const VISITOR_APPROVAL_STATUS = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  DENIED: 'DENIED',
+  NOT_REQUIRED: 'NOT_REQUIRED',
+} as const;
+
+export type VisitorApprovalStatus =
+  (typeof VISITOR_APPROVAL_STATUS)[keyof typeof VISITOR_APPROVAL_STATUS];
+
+export const VISITOR_ENTRY_STATUS = {
+  EXPECTED: 'EXPECTED',
+  CHECKED_IN: 'CHECKED_IN',
+  CHECKED_OUT: 'CHECKED_OUT',
+} as const;
+
+export type VisitorEntryStatus =
+  (typeof VISITOR_ENTRY_STATUS)[keyof typeof VISITOR_ENTRY_STATUS];
+
+export const AMENITY_BOOKING_STATUS = {
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export type AmenityBookingStatus =
+  (typeof AMENITY_BOOKING_STATUS)[keyof typeof AMENITY_BOOKING_STATUS];
+

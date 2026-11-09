@@ -89,32 +89,32 @@
       "receiptId": "rec-seed-02"
     },
     {
-      "id": "pay-1794227646730",
+      "id": "pay-1794237747246",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "amountPaise": 699000,
-      "idempotencyKey": "persist-test-1794227646726",
+      "idempotencyKey": "persist-test-1794237747243",
       "provider": "MOCK_GATEWAY",
-      "providerReference": "MOCK-UPI-910276",
+      "providerReference": "MOCK-UPI-502535",
       "status": "SUCCESS",
-      "createdAt": "2026-11-09T12:34:06.730Z",
-      "receiptId": "rec-1794227646733",
-      "paidAt": "2026-11-09T12:34:06.733Z"
+      "createdAt": "2026-11-09T15:22:27.246Z",
+      "receiptId": "rec-1794237747249",
+      "paidAt": "2026-11-09T15:22:27.249Z"
     }
   ],
   "receipts": [
     {
-      "id": "rec-1794227646733",
+      "id": "rec-1794237747249",
       "receiptNumber": "REC-202611-0003",
-      "paymentId": "pay-1794227646730",
+      "paymentId": "pay-1794237747246",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "flatIdentifier": "T12-0408",
       "residentName": "Swati Joshi",
       "billingPeriod": "November 2026",
       "amountPaise": 699000,
-      "paymentReference": "MOCK-UPI-910276",
-      "date": "2026-11-09T12:34:06.733Z"
+      "paymentReference": "MOCK-UPI-502535",
+      "date": "2026-11-09T15:22:27.249Z"
     },
     {
       "id": "rec-seed-01",
@@ -203,13 +203,13 @@
       "createdAt": "2026-11-03T11:02:00Z"
     },
     {
-      "id": "led-1794227646736",
+      "id": "led-1794237747252",
       "flatId": "flat-t12-0408",
       "entryType": "PAYMENT",
       "amountPaise": 699000,
-      "description": "Online Payment (Ref: MOCK-UPI-910276)",
-      "reference": "MOCK-UPI-910276",
-      "createdAt": "2026-11-09T12:34:06.733Z"
+      "description": "Online Payment (Ref: MOCK-UPI-502535)",
+      "reference": "MOCK-UPI-502535",
+      "createdAt": "2026-11-09T15:22:27.249Z"
     }
   ],
   "bankBatches": [
@@ -420,6 +420,167 @@
           "createdAt": "2026-11-03T10:05:00Z"
         }
       ]
+    }
+  ],
+  "visitors": [
+    {
+      "id": "vis-seed-01",
+      "flatId": "flat-t07-1203",
+      "tower": "T07",
+      "flatNumber": "1203",
+      "residentName": "Neeraj Kulkarni",
+      "visitorName": "Sunil Verma",
+      "visitorPhone": "9820009901",
+      "visitorPhotoKey": "sample_visitor_sunil.jpg",
+      "purpose": "Amazon Courier Delivery",
+      "vehicleNumber": "MH02-EK-4581",
+      "arrivedAt": "2026-11-09T10:15:00.000Z",
+      "departedAt": "2026-11-09T10:22:00.000Z",
+      "approvalStatus": "APPROVED",
+      "entryStatus": "CHECKED_OUT",
+      "photoRetainUntil": "2027-02-02T15:22:27.206Z",
+      "recordedAt": "2026-11-09T10:15:00.000Z",
+      "createdAt": "2026-11-09T10:15:00.000Z"
+    },
+    {
+      "id": "vis-seed-02",
+      "flatId": "flat-t07-1203",
+      "tower": "T07",
+      "flatNumber": "1203",
+      "residentName": "Neeraj Kulkarni",
+      "visitorName": "Priya Sharma",
+      "visitorPhone": "9820009902",
+      "visitorPhotoKey": "sample_visitor_priya.jpg",
+      "purpose": "Personal Guest",
+      "vehicleNumber": "MH01-CV-7890",
+      "arrivedAt": "2026-11-09T11:30:00.000Z",
+      "departedAt": null,
+      "approvalStatus": "APPROVED",
+      "entryStatus": "CHECKED_IN",
+      "photoRetainUntil": "2027-02-05T15:22:27.207Z",
+      "recordedAt": "2026-11-09T11:30:00.000Z",
+      "createdAt": "2026-11-09T11:30:00.000Z"
+    },
+    {
+      "id": "vis-seed-03",
+      "flatId": "flat-t12-0408",
+      "tower": "T12",
+      "flatNumber": "0408",
+      "residentName": "Swati Joshi",
+      "visitorName": "Rajesh Carpenter",
+      "visitorPhone": "9820009903",
+      "visitorPhotoKey": "sample_visitor_rajesh.jpg",
+      "purpose": "Carpentry Maintenance Work",
+      "vehicleNumber": "",
+      "arrivedAt": "2026-11-09T12:00:00.000Z",
+      "departedAt": null,
+      "approvalStatus": "PENDING",
+      "entryStatus": "EXPECTED",
+      "photoRetainUntil": "2027-02-07T15:22:27.207Z",
+      "recordedAt": "2026-11-09T12:00:00.000Z",
+      "createdAt": "2026-11-09T12:00:00.000Z"
+    }
+  ],
+  "guestCodes": [
+    {
+      "id": "gc-seed-01",
+      "flatId": "flat-t07-1203",
+      "tower": "T07",
+      "flatNumber": "1203",
+      "guestName": "Kavita Kulkarni",
+      "purpose": "Weekend Family Visit",
+      "codeHash": "969c5333859bb597e7a69c62c8c349ea5148fa6fbfa9d07644b9f8d409374ba7",
+      "codeMasked": "84****",
+      "codePlain": "842619",
+      "validFrom": "2026-11-08T15:22:27.207Z",
+      "validUntil": "2026-11-11T15:22:27.207Z",
+      "usageLimit": 2,
+      "usageCount": 0,
+      "isActive": true,
+      "createdAt": "2026-11-09T15:22:27.207Z"
+    }
+  ],
+  "amenities": [
+    {
+      "id": "amen-1",
+      "name": "Main Clubhouse Hall",
+      "description": "Air-conditioned community hall suitable for society gatherings, private events, and celebrations.",
+      "rules": "Quiet hours start at 10 PM. Music restricted to 65 dB. Host flat responsible for mandatory cleanup within 2 hours of event conclusion. (Demo fee & guidelines)",
+      "feePaise": 500000,
+      "capacity": 150,
+      "openTime": "09:00",
+      "closeTime": "23:00",
+      "slotDurationMinutes": 120,
+      "isActive": true,
+      "isDemoFee": true
+    },
+    {
+      "id": "amen-2",
+      "name": "Tennis Court 1",
+      "description": "Floodlit synthetic hard court with standard markings and net.",
+      "rules": "Non-marking tennis shoes compulsory. Maximum 1-hour active slot per flat per day. Bring own racquets and balls. (Demo fee & guidelines)",
+      "feePaise": 20000,
+      "capacity": 4,
+      "openTime": "06:00",
+      "closeTime": "21:00",
+      "slotDurationMinutes": 60,
+      "isActive": true,
+      "isDemoFee": true
+    },
+    {
+      "id": "amen-3",
+      "name": "Badminton Court A",
+      "description": "Indoor wooden flooring court with tournament regulation lighting.",
+      "rules": "Strictly gum-sole or indoor sports shoes. Turn off lights upon slot completion. No food or beverages on playing area. (Demo fee & guidelines)",
+      "feePaise": 15000,
+      "capacity": 4,
+      "openTime": "06:00",
+      "closeTime": "22:00",
+      "slotDurationMinutes": 60,
+      "isActive": true,
+      "isDemoFee": true
+    },
+    {
+      "id": "amen-4",
+      "name": "Swimming Pool",
+      "description": "Semi-Olympic 25-meter temperature-monitored pool with designated kiddie pool.",
+      "rules": "Proper synthetic swimwear mandatory. Shower prior to entry. Children under 12 must be accompanied by an adult guardian at all times. (Demo fee & guidelines)",
+      "feePaise": 0,
+      "capacity": 25,
+      "openTime": "06:00",
+      "closeTime": "20:00",
+      "slotDurationMinutes": 60,
+      "isActive": true,
+      "isDemoFee": true
+    },
+    {
+      "id": "amen-5",
+      "name": "Gymnasium & Fitness Center",
+      "description": "Full-range cardio, free weights, and resistance equipment.",
+      "rules": "Personal sweat towel mandatory. Sanitize equipment grips after use. Maximum 30 minutes on cardio machines during peak hours. (Demo fee & guidelines)",
+      "feePaise": 0,
+      "capacity": 20,
+      "openTime": "06:00",
+      "closeTime": "22:00",
+      "slotDurationMinutes": 60,
+      "isActive": true,
+      "isDemoFee": true
+    }
+  ],
+  "amenityBookings": [
+    {
+      "id": "amen-book-01",
+      "amenityId": "amen-2",
+      "amenityName": "Tennis Court 1",
+      "flatId": "flat-t21-1601",
+      "flatIdentifier": "T21-1601",
+      "residentId": "user-resident-aamir",
+      "residentName": "Aamir Shaikh",
+      "startAt": "2026-11-10T07:00:00.000Z",
+      "endAt": "2026-11-10T08:00:00.000Z",
+      "feePaise": 20000,
+      "status": "CONFIRMED",
+      "createdAt": "2026-11-08T18:00:00.000Z"
     }
   ]
 }

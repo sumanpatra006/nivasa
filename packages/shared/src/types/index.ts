@@ -159,3 +159,85 @@ export interface CommitteeDashboardMetrics {
   };
 }
 
+export interface VisitorDTO {
+  id: string;
+  clientUuid?: string;
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  residentId?: string;
+  residentName?: string;
+  visitorName: string;
+  visitorPhone?: string;
+  visitorPhotoKey?: string | null;
+  purpose: string;
+  vehicleNumber?: string;
+  expectedAt?: string | null;
+  arrivedAt?: string | null;
+  departedAt?: string | null;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'DENIED' | 'NOT_REQUIRED';
+  entryStatus: 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT';
+  photoRetainUntil?: string | null;
+  recordedAt: string;
+  createdAt: string;
+}
+
+export interface GuestCodeDTO {
+  id: string;
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  guestName: string;
+  purpose?: string;
+  code: string;
+  codeHash: string;
+  validFrom: string;
+  validUntil: string;
+  usageLimit: number;
+  usageCount: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AmenityDTO {
+  id: string;
+  name: string;
+  description: string;
+  rules: string;
+  feePaise: number;
+  capacity: number;
+  openTime: string;
+  closeTime: string;
+  slotDurationMinutes: number;
+  isActive: boolean;
+  isDemoFee: boolean;
+}
+
+export interface AmenitySlotDTO {
+  id: string;
+  amenityId: string;
+  date: string;
+  startAt: string;
+  endAt: string;
+  label: string;
+  isAvailable: boolean;
+  feePaise: number;
+}
+
+export interface AmenityBookingDTO {
+  id: string;
+  amenityId: string;
+  amenityName: string;
+  flatId: string;
+  flatIdentifier: string;
+  residentId: string;
+  residentName: string;
+  startAt: string;
+  endAt: string;
+  feePaise: number;
+  status: 'CONFIRMED' | 'CANCELLED';
+  cancelledAt?: string | null;
+  createdAt: string;
+}
+
+

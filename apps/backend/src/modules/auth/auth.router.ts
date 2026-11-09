@@ -65,6 +65,10 @@ authRouter.post('/verify-otp', (req: Request, res: Response) => {
     role = USER_ROLES.COMMITTEE;
     flatIds = [];
     name = 'Dr. Vikram Deshmukh (Secretary)';
+  } else if (phone === '9876543213') {
+    role = USER_ROLES.GUARD;
+    flatIds = [];
+    name = 'Security Guard (Gate 1)';
   } else if (phone === '9820000002') {
     role = USER_ROLES.RESIDENT;
     flatIds = ['flat-t12-0408'];

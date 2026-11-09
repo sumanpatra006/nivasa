@@ -87,6 +87,16 @@ export function RootLayout() {
               >
                 Committee
               </Link>
+              <Link
+                to="/guard"
+                className={`px-3 py-1.5 rounded-control transition-colors ${
+                  location.pathname.startsWith('/guard')
+                    ? 'bg-walnut-800 text-white font-semibold shadow-xs'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                Guard
+              </Link>
             </div>
           </div>
         </div>

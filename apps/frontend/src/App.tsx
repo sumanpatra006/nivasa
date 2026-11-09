@@ -11,12 +11,18 @@ import { StaffOverviewPage } from './pages/StaffOverviewPage.js';
 import { StaffComplaintsPage } from './pages/StaffComplaintsPage.js';
 import { StaffReconciliationPage } from './pages/StaffReconciliationPage.js';
 import { CommitteeDashboardPage } from './pages/CommitteeDashboardPage.js';
+import { ResidentVisitorsPage } from './pages/ResidentVisitorsPage.js';
+import { ResidentAmenitiesPage } from './pages/ResidentAmenitiesPage.js';
+import { GuardTabletPage } from './pages/GuardTabletPage.js';
 
 export function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Guard Tablet Terminal (Dedicated Fullscreen Interface) */}
+        <Route path="/guard" element={<GuardTabletPage />} />
 
         {/* Core Layout with Shared Top Context Bar */}
         <Route element={<RootLayout />}>
@@ -27,6 +33,8 @@ export function App() {
             <Route index element={<ResidentHomePage />} />
             <Route path="maintenance" element={<MaintenancePage />} />
             <Route path="complaints" element={<ResidentComplaintsPage />} />
+            <Route path="visitors" element={<ResidentVisitorsPage />} />
+            <Route path="amenities" element={<ResidentAmenitiesPage />} />
           </Route>
 
           {/* Staff Experience (Operational Clarity) */}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink, useOutletContext } from 'react-router-dom';
-import { Home, Receipt, Wrench, ShieldCheck } from 'lucide-react';
+import { Home, Receipt, Wrench, Users, CalendarCheck } from 'lucide-react';
 import { DemoFlat } from '../fixtures/uiData.js';
 
 export function ResidentLayout() {
@@ -10,6 +10,8 @@ export function ResidentLayout() {
     { to: '/resident', label: 'Home', icon: Home, end: true },
     { to: '/resident/maintenance', label: 'Maintenance', icon: Receipt },
     { to: '/resident/complaints', label: 'Complaints', icon: Wrench },
+    { to: '/resident/visitors', label: 'Visitors', icon: Users },
+    { to: '/resident/amenities', label: 'Amenities', icon: CalendarCheck },
   ];
 
   return (

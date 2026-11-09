@@ -43,6 +43,8 @@ Thumbs.db
 *.db-journal
 uploads/
 tmp/
+apps/backend/data/photos/
+data/photos/
 
 # Skills and Agent settings
 .agents/

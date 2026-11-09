@@ -390,7 +390,190 @@ export class ApiClient {
     if (!res.ok) throw new Error(`Download failed: ${res.statusText}`);
     return res.text();
   }
+
+  // ==========================================
+  // Visitor Management & Guard Tablet API
+  // ==========================================
+  public static async authenticateGuard(phone: string = '9876543213'): Promise<string> {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp: '123456' }),
+    });
+    if (!res.ok) throw new Error('Guard authentication failed');
+    const data = await res.json();
+    this.setToken(data.token);
+    return data.token;
+  }
+
+  public static async getVisitors(flatId?: string): Promise<{ visitors: ApiVisitor[] }> {
+    const query = flatId ? `?flatId=${encodeURIComponent(flatId)}` : '';
+    return this.request<{ visitors: ApiVisitor[] }>(`/visitors${query}`);
+  }
+
+  public static async registerVisitor(data: {
+    clientUuid?: string;
+    flatId: string;
+    visitorName: string;
+    visitorPhone?: string;
+    purpose: string;
+    vehicleNumber?: string;
+    photoBase64?: string;
+    visitorPhotoKey?: string;
+    preApprovedCode?: string;
+    recordedAt?: string;
+  }): Promise<{ visitor: ApiVisitor }> {
+    return this.request<{ visitor: ApiVisitor }>('/visitors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async approveVisitor(
+    id: string,
+    status: 'APPROVED' | 'DENIED'
+  ): Promise<{ visitor: ApiVisitor }> {
+    return this.request<{ visitor: ApiVisitor }>(`/visitors/${encodeURIComponent(id)}/approval`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  public static async recordVisitorEntry(id: string): Promise<{ visitor: ApiVisitor }> {
+    return this.request<{ visitor: ApiVisitor }>(`/visitors/${encodeURIComponent(id)}/entry`, {
+      method: 'PATCH',
+    });
+  }
+
+  public static async recordVisitorExit(id: string): Promise<{ visitor: ApiVisitor }> {
+    return this.request<{ visitor: ApiVisitor }>(`/visitors/${encodeURIComponent(id)}/exit`, {
+      method: 'PATCH',
+    });
+  }
+
+  public static async syncVisitorBatch(
+    visitors: Array<any>
+  ): Promise<{ syncedCount: number; totalReceived: number; visitors: ApiVisitor[] }> {
+    return this.request<{ syncedCount: number; totalReceived: number; visitors: ApiVisitor[] }>(
+      '/visitors/sync-batch',
+      {
+        method: 'POST',
+        body: JSON.stringify({ visitors }),
+      }
+    );
+  }
+
+  public static async purgeExpiredPhotos(): Promise<{
+    message: string;
+    purgedPhotosCount: number;
+    purgedFiles: string[];
+    complianceStatus: string;
+  }> {
+    return this.request<{
+      message: string;
+      purgedPhotosCount: number;
+      purgedFiles: string[];
+      complianceStatus: string;
+    }>('/visitors/purge-expired-photos', {
+      method: 'POST',
+    });
+  }
+
+  public static async getGuestCodes(flatId?: string): Promise<{ guestCodes: ApiGuestCode[] }> {
+    const query = flatId ? `?flatId=${encodeURIComponent(flatId)}` : '';
+    return this.request<{ guestCodes: ApiGuestCode[] }>(`/visitors/guest-codes${query}`);
+  }
+
+  public static async createGuestCode(data: {
+    flatId: string;
+    guestName: string;
+    purpose?: string;
+    validFrom?: string;
+    validUntil: string;
+    usageLimit?: number;
+  }): Promise<{ guestCode: ApiGuestCode }> {
+    return this.request<{ guestCode: ApiGuestCode }>('/visitors/guest-codes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  public static async validateGuestCode(code: string): Promise<{
+    isValid: boolean;
+    reason?: string;
+    guestCode?: ApiGuestCode;
+    visitor?: ApiVisitor;
+    message?: string;
+  }> {
+    return this.request<{
+      isValid: boolean;
+      reason?: string;
+      guestCode?: ApiGuestCode;
+      visitor?: ApiVisitor;
+      message?: string;
+    }>('/visitors/guest-codes/validate', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
+  // ==========================================
+  // Amenities API
+  // ==========================================
+  public static async getAmenities(): Promise<{
+    amenities: ApiAmenity[];
+    disclaimer: string;
+  }> {
+    return this.request<{ amenities: ApiAmenity[]; disclaimer: string }>('/amenities');
+  }
+
+  public static async getAmenitySlots(
+    amenityId: string,
+    date: string
+  ): Promise<{
+    amenityId: string;
+    date: string;
+    slots: ApiAmenitySlot[];
+  }> {
+    return this.request<{
+      amenityId: string;
+      date: string;
+      slots: ApiAmenitySlot[];
+    }>(`/amenities/${encodeURIComponent(amenityId)}/slots?date=${encodeURIComponent(date)}`);
+  }
+
+  public static async bookAmenity(
+    amenityId: string,
+    data: { flatId: string; startAt: string; endAt: string }
+  ): Promise<{ booking: ApiAmenityBooking }> {
+    return this.request<{ booking: ApiAmenityBooking }>(
+      `/amenities/${encodeURIComponent(amenityId)}/book`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  public static async cancelAmenityBooking(
+    bookingId: string
+  ): Promise<{ message: string; booking: ApiAmenityBooking }> {
+    return this.request<{ message: string; booking: ApiAmenityBooking }>(
+      `/amenities/bookings/${encodeURIComponent(bookingId)}/cancel`,
+      {
+        method: 'POST',
+      }
+    );
+  }
+
+  public static async getAmenityBookings(
+    flatId?: string
+  ): Promise<{ bookings: ApiAmenityBooking[] }> {
+    const query = flatId ? `?flatId=${encodeURIComponent(flatId)}` : '';
+    return this.request<{ bookings: ApiAmenityBooking[] }>(`/amenities/bookings${query}`);
+  }
 }
+
 
 export interface ApiReconciledTransaction {
   id: string;
@@ -500,4 +683,86 @@ export interface ApiComplaint {
     createdAt: string;
   }>;
 }
+
+export interface ApiVisitor {
+  id: string;
+  clientUuid?: string;
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  residentName?: string;
+  visitorName: string;
+  visitorPhone?: string;
+  visitorPhotoKey?: string | null;
+  purpose: string;
+  vehicleNumber?: string;
+  arrivedAt?: string | null;
+  departedAt?: string | null;
+  approvalStatus: 'PENDING' | 'APPROVED' | 'DENIED' | 'NOT_REQUIRED';
+  entryStatus: 'EXPECTED' | 'CHECKED_IN' | 'CHECKED_OUT';
+  photoRetainUntil?: string | null;
+  recordedAt: string;
+  createdAt: string;
+}
+
+export interface ApiGuestCode {
+  id: string;
+  flatId: string;
+  tower: string;
+  flatNumber: string;
+  guestName: string;
+  purpose?: string;
+  codeHash: string;
+  codeMasked: string;
+  codePlain?: string;
+  validFrom: string;
+  validUntil: string;
+  usageLimit: number;
+  usageCount: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ApiAmenity {
+  id: string;
+  name: string;
+  description: string;
+  rules: string;
+  feePaise: number;
+  capacity: number;
+  openTime: string;
+  closeTime: string;
+  slotDurationMinutes: number;
+  isActive: boolean;
+  isDemoFee: boolean;
+}
+
+export interface ApiAmenitySlot {
+  id: string;
+  amenityId: string;
+  date: string;
+  startAt: string;
+  endAt: string;
+  label: string;
+  isAvailable: boolean;
+  feePaise: number;
+  bookedByFlat?: string;
+}
+
+export interface ApiAmenityBooking {
+  id: string;
+  amenityId: string;
+  amenityName: string;
+  flatId: string;
+  flatIdentifier: string;
+  residentId: string;
+  residentName: string;
+  startAt: string;
+  endAt: string;
+  feePaise: number;
+  status: 'CONFIRMED' | 'CANCELLED';
+  cancelledAt?: string | null;
+  createdAt: string;
+}
+
 

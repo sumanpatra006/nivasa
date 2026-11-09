@@ -189,10 +189,19 @@ export function ResidentHomePage() {
             </div>
           </div>
 
-          <div className="pt-4 mt-2 border-t border-border/60">
-            <span className="text-[11px] text-text-muted">
-              Pre-approved guest codes can be generated at the security gate.
-            </span>
+          <div className="pt-4 mt-2 border-t border-border/60 flex items-center justify-between">
+            <Link
+              to="/resident/visitors"
+              className="text-xs font-semibold text-sage-700 hover:text-sage-900 inline-flex items-center gap-1"
+            >
+              Manage visitors & passes <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              to="/resident/amenities"
+              className="text-xs font-semibold text-walnut-700 hover:text-walnut-900 inline-flex items-center gap-1"
+            >
+              Book amenities <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       </div>

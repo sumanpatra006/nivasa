@@ -1,64 +1,134 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
+import { BookAmenitySchema, CancelBookingSchema } from '@nivasa/shared';
+import { societyStore } from '../billing/societyStore.js';
 
 export const amenitiesRouter = Router();
 
 amenitiesRouter.use(authMiddleware);
 
-const mockAmenities = [
-  { id: 'amen-1', name: 'Main Clubhouse Hall', feePaise: 500000, capacity: 150, isActive: true },
-  { id: 'amen-2', name: 'Tennis Court 1', feePaise: 20000, capacity: 4, isActive: true },
-  { id: 'amen-3', name: 'Badminton Court A', feePaise: 15000, capacity: 4, isActive: true },
-];
-
-const mockBookings: any[] = [];
-
+/**
+ * GET /api/v1/amenities
+ * List all active society amenities with rules and demo fees.
+ */
 amenitiesRouter.get('/', (_req: Request, res: Response) => {
-  res.status(200).json({ amenities: mockAmenities });
+  const amenities = societyStore.getAmenities();
+  res.status(200).json({
+    amenities,
+    disclaimer: 'All fees and bye-law rules are demo simulations for testing purposes only.',
+  });
 });
 
-amenitiesRouter.post('/:id/book', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { flatId, startAt, endAt } = req.body;
+/**
+ * GET /api/v1/amenities/bookings
+ * List amenity bookings. Residents see their flat bookings; staff see all.
+ */
+amenitiesRouter.get('/bookings', (req: Request, res: Response) => {
+  const user = req.user!;
+  let flatId = req.query.flatId as string | undefined;
 
-  const amenity = mockAmenities.find((a) => a.id === id);
-  if (!amenity) {
-    res.status(404).json({ error: 'Amenity not found' });
-    return;
+  if (user.role === 'RESIDENT') {
+    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
+    flatId = residentFlatId;
   }
 
-  // Conflict overlap check
-  const start = new Date(startAt).getTime();
-  const end = new Date(endAt).getTime();
+  const bookings = societyStore.getAmenityBookings(flatId);
+  res.status(200).json({ bookings });
+});
 
-  const hasConflict = mockBookings.some((b) => {
-    if (b.amenityId !== id || b.status !== 'CONFIRMED') return false;
-    const bStart = new Date(b.startAt).getTime();
-    const bEnd = new Date(b.endAt).getTime();
-    return start < bEnd && end > bStart;
+/**
+ * GET /api/v1/amenities/:id/slots
+ * Retrieve time slot availability for a specified date (YYYY-MM-DD).
+ */
+amenitiesRouter.get('/:id/slots', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const dateStr = (req.query.date as string) || new Date().toISOString().slice(0, 10);
+
+  try {
+    const slots = societyStore.getAmenitySlots(id, dateStr);
+    res.status(200).json({
+      amenityId: id,
+      date: dateStr,
+      slots,
+    });
+  } catch (err: any) {
+    res.status(404).json({ error: err.message || 'Amenity not found' });
+  }
+});
+
+/**
+ * POST /api/v1/amenities/:id/book
+ * Book an amenity slot.
+ * Rejects with 409 Conflict if slot is already occupied.
+ */
+amenitiesRouter.post('/:id/book', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const user = req.user!;
+
+  const parseResult = BookAmenitySchema.safeParse({
+    flatId: req.body.flatId,
+    startAt: req.body.startAt,
+    endAt: req.body.endAt,
   });
 
-  if (hasConflict) {
-    res.status(409).json({
-      error: 'Conflict',
-      message: 'The requested amenity slot is already booked. Please choose another time window.',
+  if (!parseResult.success) {
+    res.status(400).json({
+      error: 'Validation Error',
+      details: parseResult.error.format(),
     });
     return;
   }
 
-  const booking = {
-    id: `book-${Date.now()}`,
-    amenityId: id,
-    flatId,
-    residentId: req.user!.id,
-    startAt,
-    endAt,
-    feePaise: amenity.feePaise,
-    status: 'CONFIRMED',
-    createdAt: new Date().toISOString(),
-  };
+  const data = parseResult.data;
 
-  mockBookings.push(booking);
-  res.status(201).json({ booking });
+  // Authorization check for residents
+  if (user.role === 'RESIDENT') {
+    const residentFlatId = user.phone === '9820000001' ? 'flat-t07-1203' : 'flat-t12-0408';
+    if (data.flatId !== residentFlatId) {
+      res.status(403).json({ error: 'You are not authorized to book amenities for another flat.' });
+      return;
+    }
+  }
+
+  try {
+    const booking = societyStore.bookAmenity({
+      amenityId: id,
+      flatId: data.flatId,
+      residentId: user.id,
+      residentName: user.name || 'Resident',
+      startAt: data.startAt,
+      endAt: data.endAt,
+    });
+
+    res.status(201).json({ booking });
+  } catch (err: any) {
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({
+      error: statusCode === 409 ? 'Conflict' : 'Error',
+      message: err.message,
+    });
+  }
 });
 
+/**
+ * POST /api/v1/amenities/bookings/:id/cancel
+ * Cancel an active amenity booking. Frees up the slot immediately.
+ */
+amenitiesRouter.post('/bookings/:id/cancel', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const user = req.user!;
+
+  try {
+    const booking = societyStore.cancelAmenityBooking(id, user.id, user.role);
+    res.status(200).json({
+      message: 'Booking cancelled successfully. The slot is now available.',
+      booking,
+    });
+  } catch (err: any) {
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({
+      error: statusCode === 403 ? 'Forbidden' : 'Error',
+      message: err.message,
+    });
+  }
+});

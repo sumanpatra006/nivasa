@@ -70,6 +70,57 @@ export const BankCsvRowSchema = z.object({
   description: z.string().optional(),
 });
 
+// Visitor Schemas
+export const CreateVisitorSchema = z.object({
+  clientUuid: z.string().optional(),
+  flatId: z.string().min(1, 'Destination flat is required'),
+  visitorName: z.string().min(2, 'Visitor name must be at least 2 characters').max(100),
+  visitorPhone: z
+    .string()
+    .regex(/^[0-9]{10}$/, '10-digit mobile number')
+    .optional()
+    .or(z.literal('')),
+  purpose: z.string().min(2, 'Purpose is required').max(200),
+  vehicleNumber: z.string().max(20).optional().or(z.literal('')),
+  photoBase64: z.string().max(1000000).optional(),
+  visitorPhotoKey: z.string().optional(),
+  preApprovedCode: z.string().length(6).optional().or(z.literal('')),
+  recordedAt: z.string().optional(),
+});
+
+export const VisitorApprovalSchema = z.object({
+  status: z.enum(['APPROVED', 'DENIED']),
+  note: z.string().max(200).optional(),
+});
+
+export const GenerateGuestCodeSchema = z.object({
+  flatId: z.string().min(1, 'Flat ID is required'),
+  guestName: z.string().min(2, 'Guest name is required').max(100),
+  purpose: z.string().max(200).optional(),
+  validFrom: z.string().optional(),
+  validUntil: z.string().min(1, 'Validity end time is required'),
+  usageLimit: z.number().int().min(1).default(1),
+});
+
+export const ValidateGuestCodeSchema = z.object({
+  code: z.string().length(6, 'Guest pass PIN must be 6 digits'),
+});
+
+export const BatchSyncVisitorsSchema = z.object({
+  visitors: z.array(CreateVisitorSchema),
+});
+
+// Amenity Schemas
+export const BookAmenitySchema = z.object({
+  flatId: z.string().min(1, 'Flat ID is required'),
+  startAt: z.string().min(1, 'Start time is required'),
+  endAt: z.string().min(1, 'End time is required'),
+});
+
+export const CancelBookingSchema = z.object({
+  reason: z.string().max(500).optional(),
+});
+
 // Types inferred from schemas
 export type RequestOtpInput = z.infer<typeof RequestOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof VerifyOtpSchema>;
@@ -81,4 +132,11 @@ export type RateComplaintInput = z.infer<typeof RateComplaintSchema>;
 export type LinkDuplicateInput = z.infer<typeof LinkDuplicateSchema>;
 export type InitiatePaymentInput = z.infer<typeof InitiatePaymentSchema>;
 export type BankCsvRowInput = z.infer<typeof BankCsvRowSchema>;
+export type CreateVisitorInput = z.infer<typeof CreateVisitorSchema>;
+export type VisitorApprovalInput = z.infer<typeof VisitorApprovalSchema>;
+export type GenerateGuestCodeInput = z.infer<typeof GenerateGuestCodeSchema>;
+export type ValidateGuestCodeInput = z.infer<typeof ValidateGuestCodeSchema>;
+export type BatchSyncVisitorsInput = z.infer<typeof BatchSyncVisitorsSchema>;
+export type BookAmenityInput = z.infer<typeof BookAmenitySchema>;
+export type CancelBookingInput = z.infer<typeof CancelBookingSchema>;
 
