@@ -3,20 +3,19 @@ import { useOutletContext } from 'react-router-dom';
 import {
   Calendar,
   Clock,
-  Users,
-  CheckCircle2,
-  AlertTriangle,
   Info,
   CalendarCheck,
-  XCircle,
-  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button.js';
-import { StatusBadge } from '../components/ui/StatusBadge.js';
 import { Modal } from '../components/ui/Modal.js';
 import { ApiClient, ApiAmenity, ApiAmenitySlot, ApiAmenityBooking } from '../services/api.js';
 import { DemoFlat } from '../fixtures/uiData.js';
 import { formatPaiseToINR } from '@nivasa/shared';
+import { AmenityCard } from '../components/amenities/AmenityCard.js';
+import { AmenitySlotGrid } from '../components/amenities/AmenitySlotGrid.js';
+import { ResidentBookingsList } from '../components/amenities/ResidentBookingsList.js';
 
 export function ResidentAmenitiesPage() {
   const { currentFlat } = useOutletContext<{ currentFlat: DemoFlat }>();
@@ -24,7 +23,6 @@ export function ResidentAmenitiesPage() {
   const [amenities, setAmenities] = useState<ApiAmenity[]>([]);
   const [selectedAmenity, setSelectedAmenity] = useState<ApiAmenity | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
-    // Tomorrow by default
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10);
@@ -101,13 +99,17 @@ export function ResidentAmenitiesPage() {
       });
       setIsBookingModalOpen(false);
       setSelectedSlot(null);
-      fetchAmenitiesAndBookings();
+
+      // Refresh slots and resident bookings
       fetchSlots(selectedAmenity.id, selectedDate);
+      const updatedBookings = await ApiClient.getAmenityBookings(currentFlat.id);
+      setBookings(updatedBookings.bookings);
     } catch (err: any) {
       setStatusMessage({
         type: 'error',
-        text: err.message || 'Slot booking failed. The window may have been taken.',
+        text: err.message || 'Failed to book slot. It may have already been reserved.',
       });
+      setIsBookingModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,289 +123,209 @@ export function ResidentAmenitiesPage() {
         type: 'success',
         text: 'Booking cancelled. The slot has been freed for other residents.',
       });
-      fetchAmenitiesAndBookings();
+
+      const updatedBookings = await ApiClient.getAmenityBookings(currentFlat.id);
+      setBookings(updatedBookings.bookings);
       if (selectedAmenity) {
         fetchSlots(selectedAmenity.id, selectedDate);
       }
     } catch (err: any) {
-      setStatusMessage({ type: 'error', text: err.message || 'Cancellation failed.' });
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Failed to cancel booking.',
+      });
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-walnut-900">
-            Society Amenities & Slot Booking
-          </h2>
-          <p className="text-xs text-text-muted mt-0.5">
-            Reserve community facilities with non-overlapping slot management.
-          </p>
+      {/* 1. Header with Disclaimer Banner */}
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-walnut-900">Society Amenities & Slot Booking</h1>
+            <p className="text-xs text-text-secondary">
+              Reserve clubhouse facilities, courts, and community halls for personal use.
+            </p>
+          </div>
         </div>
 
-        {/* Demo Fees Disclaimer Badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-[11px] font-semibold text-amber-900">
-          <Info className="h-3.5 w-3.5 text-amber-700 shrink-0" />
-          <span>Non-Statutory Demo Fees & Rules</span>
+        {/* Explicit Demo Disclaimer Banner */}
+        <div className="rounded-control border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2.5">
+          <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-700" />
+          <div>
+            <strong className="font-semibold text-amber-950">Non-Statutory Demo Fees & Rules:</strong>
+            <p className="mt-0.5 text-amber-800 text-[11px]">
+              Actual township bye-laws and fee structures are governed by the society managing committee.
+              All slot fees and time limits shown here are demonstration simulations.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Status Feedback */}
+      {/* Status Messages */}
       {statusMessage && (
         <div
-          className={`p-3.5 rounded-control text-xs flex items-center justify-between border ${
+          className={`p-3.5 rounded-control border flex items-center justify-between text-xs ${
             statusMessage.type === 'success'
               ? 'bg-sage-50 border-sage-300 text-sage-900'
-              : 'bg-amber-50 border-amber-300 text-amber-900'
+              : 'bg-red-50 border-red-300 text-red-900'
           }`}
         >
-          <span>{statusMessage.text}</span>
+          <div className="flex items-center gap-2">
+            {statusMessage.type === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 text-sage-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-red-600 shrink-0" />
+            )}
+            <span>{statusMessage.text}</span>
+          </div>
           <button
             type="button"
             onClick={() => setStatusMessage(null)}
-            className="text-[11px] font-semibold text-text-muted hover:text-text-primary ml-2"
+            className="text-[11px] font-semibold underline ml-4"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Amenity Picker Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {amenities.map((amenity) => {
-          const isSelected = selectedAmenity?.id === amenity.id;
-          return (
-            <button
-              type="button"
+      {/* 2. Amenity Selection Cards */}
+      <div>
+        <h2 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-3">
+          1. Select Facility
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {amenities.map((amenity) => (
+            <AmenityCard
               key={amenity.id}
-              onClick={() => setSelectedAmenity(amenity)}
-              className={`text-left p-4 rounded-surface border transition-all ${
-                isSelected
-                  ? 'border-sage-500 bg-sage-50/40 shadow-sm ring-1 ring-sage-500'
-                  : 'border-border bg-surface hover:border-walnut-300'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-bold text-sm text-walnut-900">{amenity.name}</span>
-                <span className="font-bold text-xs text-sage-800">
-                  {amenity.feePaise === 0 ? 'Complimentary' : `${formatPaiseToINR(amenity.feePaise)}/slot`}
-                </span>
-              </div>
-              <p className="text-xs text-text-secondary line-clamp-2 mb-3">{amenity.description}</p>
-              <div className="flex items-center justify-between text-[11px] text-text-muted pt-2 border-t border-border/60">
-                <span className="inline-flex items-center gap-1">
-                  <Users className="h-3 w-3" /> Max {amenity.capacity} people
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> {amenity.openTime} – {amenity.closeTime}
-                </span>
-              </div>
-            </button>
-          );
-        })}
+              amenity={amenity}
+              isSelected={selectedAmenity?.id === amenity.id}
+              onSelect={setSelectedAmenity}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Selected Amenity Slot Availability & Booking Grid */}
+      {/* 3. Slot Schedule & Date Picker */}
       {selectedAmenity && (
         <div className="rounded-surface border border-border bg-surface p-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-border">
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-walnut-900">{selectedAmenity.name}</h3>
-                <span className="text-xs font-semibold text-sage-800">
-                  {selectedAmenity.feePaise === 0 ? 'Free' : formatPaiseToINR(selectedAmenity.feePaise)}
-                </span>
-              </div>
-              <p className="text-xs text-text-muted mt-0.5">Rules: {selectedAmenity.rules}</p>
+              <h2 className="text-sm font-bold text-walnut-900">
+                2. Choose Slot for {selectedAmenity.name}
+              </h2>
+              <p className="text-xs text-text-muted">
+                Operating hours: {selectedAmenity.openTime} – {selectedAmenity.closeTime} • {selectedAmenity.slotDurationMinutes} min sessions
+              </p>
             </div>
 
             {/* Date Selector */}
             <div className="flex items-center gap-2">
-              <label htmlFor="slot-date-picker" className="text-xs font-bold text-walnut-900">Date:</label>
+              <label htmlFor="amenity-booking-date" className="text-xs font-semibold text-text-primary flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-sage-600" /> Date:
+              </label>
               <input
-                id="slot-date-picker"
+                id="amenity-booking-date"
                 type="date"
                 value={selectedDate}
                 min={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="rounded-control border border-border bg-canvas px-3 py-1.5 text-xs font-semibold text-walnut-900 focus:outline-none focus:ring-1 focus:ring-sage-500"
+                className="rounded-control border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-walnut-900 focus:outline-none focus:border-sage-500"
               />
             </div>
           </div>
 
-          {/* Slots Grid */}
-          <div className="mt-5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted mb-3">
-              Available Slots for {new Date(selectedDate).toDateString()}
-            </h4>
-
-            {isSlotsLoading ? (
-              <div className="text-center py-10 text-xs text-text-muted">Loading available slots...</div>
-            ) : slots.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {slots.map((slot) => {
-                  return (
-                    <button
-                      type="button"
-                      key={slot.id}
-                      disabled={!slot.isAvailable}
-                      onClick={() => {
-                        setSelectedSlot(slot);
-                        setIsBookingModalOpen(true);
-                      }}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        slot.isAvailable
-                          ? 'border-sage-200 bg-sage-50/50 hover:border-sage-500 hover:bg-sage-100/50 active:scale-95 cursor-pointer'
-                          : 'border-border bg-surface-alt/70 opacity-60 cursor-not-allowed'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-xs text-walnut-900">{slot.label}</span>
-                        {slot.isAvailable ? (
-                          <span className="h-2 w-2 rounded-full bg-sage-500"></span>
-                        ) : (
-                          <span className="h-2 w-2 rounded-full bg-amber-500"></span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-text-muted flex items-center justify-between">
-                        <span>{slot.isAvailable ? 'Available' : 'Booked'}</span>
-                        <span className="font-bold text-sage-800">
-                          {slot.feePaise === 0 ? 'Free' : formatPaiseToINR(slot.feePaise)}
-                        </span>
-                      </div>
-                      {slot.bookedByFlat && (
-                        <span className="text-[10px] text-text-muted block mt-1">Flat: {slot.bookedByFlat}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-xs text-text-muted">
-                No slots configured for this facility today.
-              </div>
-            )}
-          </div>
+          {/* Slot Grid Component */}
+          <AmenitySlotGrid
+            slots={slots}
+            isLoading={isSlotsLoading}
+            selectedSlot={selectedSlot}
+            onSelectSlot={(slot) => {
+              setSelectedSlot(slot);
+              setIsBookingModalOpen(true);
+            }}
+          />
         </div>
       )}
 
-      {/* Flat's Booking History */}
-      <div className="rounded-surface border border-border bg-surface p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <CalendarCheck className="h-4 w-4 text-walnut-600" />
-            <h3 className="text-sm font-bold text-walnut-900">
-              Bookings for Flat {currentFlat.tower}-{currentFlat.flatNumber}
-            </h3>
-          </div>
-          <span className="text-xs text-text-muted">{bookings.length} reservations</span>
-        </div>
-
-        <div className="space-y-3">
-          {bookings.length > 0 ? (
-            bookings.map((b) => (
-              <div
-                key={b.id}
-                className="p-4 rounded-xl border border-border bg-canvas flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-walnut-900">{b.amenityName}</span>
-                    <StatusBadge
-                      variant={b.status === 'CONFIRMED' ? 'paid' : 'overdue'}
-                      label={b.status}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-text-muted mt-1">
-                    <span>
-                      Window: {new Date(b.startAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })} –{' '}
-                      {new Date(b.endAt).toLocaleTimeString([], { timeStyle: 'short' })}
-                    </span>
-                    <span>•</span>
-                    <span className="font-semibold text-text-primary">
-                      Fee: {b.feePaise === 0 ? 'Complimentary' : formatPaiseToINR(b.feePaise)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cancel Booking Action */}
-                {b.status === 'CONFIRMED' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCancelBooking(b.id)}
-                    leftIcon={<XCircle className="h-3.5 w-3.5" />}
-                  >
-                    Cancel Booking
-                  </Button>
-                )}
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-8 text-xs text-text-muted">
-              No facility bookings found for your flat.
-            </div>
-          )}
-        </div>
+      {/* 4. Resident's Bookings History */}
+      <div>
+        <h2 className="text-xs font-bold text-text-primary uppercase tracking-wider mb-3">
+          Your Scheduled Bookings ({bookings.length})
+        </h2>
+        <ResidentBookingsList bookings={bookings} onCancelBooking={handleCancelBooking} />
       </div>
 
-      {/* Booking Confirmation Modal */}
-      <Modal
-        isOpen={isBookingModalOpen}
-        onClose={() => setIsBookingModalOpen(false)}
-        title="Confirm Facility Booking"
-      >
-        {selectedSlot && selectedAmenity && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-sage-50 border border-sage-300 text-xs text-sage-950 space-y-1.5">
+      {/* 5. Booking Confirmation Modal */}
+      {selectedSlot && selectedAmenity && (
+        <Modal
+          isOpen={isBookingModalOpen}
+          onClose={() => {
+            setIsBookingModalOpen(false);
+            setSelectedSlot(null);
+          }}
+          title={`Confirm Booking: ${selectedAmenity.name}`}
+        >
+          <div className="space-y-4 text-xs">
+            <p className="text-text-secondary">
+              Review booking details for your flat before reserving the slot:
+            </p>
+
+            <div className="rounded-control border border-border bg-surface-alt p-3.5 space-y-2">
               <div className="flex justify-between">
-                <span>Facility:</span>
-                <strong className="text-sage-900">{selectedAmenity.name}</strong>
+                <span className="text-text-muted">Facility:</span>
+                <span className="font-bold text-walnut-900">{selectedAmenity.name}</span>
               </div>
               <div className="flex justify-between">
-                <span>Slot Window:</span>
-                <strong className="text-sage-900">
-                  {new Date(selectedSlot.date).toDateString()} • {selectedSlot.label}
-                </strong>
+                <span className="text-text-muted">Date & Time:</span>
+                <span className="font-semibold text-walnut-900">
+                  {selectedDate} • {selectedSlot.label}
+                </span>
               </div>
               <div className="flex justify-between">
-                <span>Flat Account:</span>
-                <strong className="text-sage-900">
-                  Tower {currentFlat.tower} - {currentFlat.flatNumber} ({currentFlat.residentName})
-                </strong>
+                <span className="text-text-muted">Flat:</span>
+                <span className="font-semibold text-walnut-900">
+                  {currentFlat.tower}-{currentFlat.flatNumber} ({currentFlat.residentName})
+                </span>
               </div>
-              <div className="flex justify-between pt-2 border-t border-sage-200 text-sm font-bold">
-                <span>Demo Booking Fee:</span>
-                <span className="text-walnut-900">
-                  {selectedSlot.feePaise === 0 ? 'Complimentary' : formatPaiseToINR(selectedSlot.feePaise)}
+              <div className="flex justify-between border-t border-border pt-2 font-bold">
+                <span className="text-walnut-900">Facility Demo Fee:</span>
+                <span className="text-sage-800">
+                  {selectedAmenity.feePaise === 0 ? 'Complimentary' : formatPaiseToINR(selectedAmenity.feePaise)}
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-text-muted">
-              By confirming, you agree to society facility guidelines: {selectedAmenity.rules}
-            </p>
+            {selectedAmenity.rules && (
+              <div className="text-[11px] text-text-muted bg-surface p-2.5 rounded-control border border-border">
+                <strong>Facility Rules:</strong> {selectedAmenity.rules}
+              </div>
+            )}
 
-            <div className="pt-2 flex justify-end gap-2">
-              <Button variant="outline" size="md" onClick={() => setIsBookingModalOpen(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsBookingModalOpen(false);
+                  setSelectedSlot(null);
+                }}
+              >
                 Cancel
               </Button>
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
+                isLoading={isSubmitting}
                 onClick={handleBookSlot}
-                disabled={isSubmitting}
               >
-                {isSubmitting ? 'Reserving...' : 'Confirm Reservation'}
+                Confirm Reservation
               </Button>
             </div>
           </div>
-        )}
-      </Modal>
+        </Modal>
+      )}
     </div>
   );
 }
-
-export default ResidentAmenitiesPage;

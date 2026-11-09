@@ -89,32 +89,32 @@
       "receiptId": "rec-seed-02"
     },
     {
-      "id": "pay-1794237747246",
+      "id": "pay-1794242401831",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "amountPaise": 699000,
-      "idempotencyKey": "persist-test-1794237747243",
+      "idempotencyKey": "persist-test-1794242401819",
       "provider": "MOCK_GATEWAY",
-      "providerReference": "MOCK-UPI-502535",
+      "providerReference": "MOCK-UPI-275074",
       "status": "SUCCESS",
-      "createdAt": "2026-11-09T15:22:27.246Z",
-      "receiptId": "rec-1794237747249",
-      "paidAt": "2026-11-09T15:22:27.249Z"
+      "createdAt": "2026-11-09T16:40:01.831Z",
+      "receiptId": "rec-1794242401835",
+      "paidAt": "2026-11-09T16:40:01.835Z"
     }
   ],
   "receipts": [
     {
-      "id": "rec-1794237747249",
+      "id": "rec-1794242401835",
       "receiptNumber": "REC-202611-0003",
-      "paymentId": "pay-1794237747246",
+      "paymentId": "pay-1794242401831",
       "invoiceId": "inv-t12-0408-202611",
       "flatId": "flat-t12-0408",
       "flatIdentifier": "T12-0408",
       "residentName": "Swati Joshi",
       "billingPeriod": "November 2026",
       "amountPaise": 699000,
-      "paymentReference": "MOCK-UPI-502535",
-      "date": "2026-11-09T15:22:27.249Z"
+      "paymentReference": "MOCK-UPI-275074",
+      "date": "2026-11-09T16:40:01.835Z"
     },
     {
       "id": "rec-seed-01",
@@ -203,13 +203,13 @@
       "createdAt": "2026-11-03T11:02:00Z"
     },
     {
-      "id": "led-1794237747252",
+      "id": "led-1794242401841",
       "flatId": "flat-t12-0408",
       "entryType": "PAYMENT",
       "amountPaise": 699000,
-      "description": "Online Payment (Ref: MOCK-UPI-502535)",
-      "reference": "MOCK-UPI-502535",
-      "createdAt": "2026-11-09T15:22:27.249Z"
+      "description": "Online Payment (Ref: MOCK-UPI-275074)",
+      "reference": "MOCK-UPI-275074",
+      "createdAt": "2026-11-09T16:40:01.835Z"
     }
   ],
   "bankBatches": [
@@ -438,7 +438,7 @@
       "departedAt": "2026-11-09T10:22:00.000Z",
       "approvalStatus": "APPROVED",
       "entryStatus": "CHECKED_OUT",
-      "photoRetainUntil": "2027-02-02T15:22:27.206Z",
+      "photoRetainUntil": "2027-02-02T16:40:01.711Z",
       "recordedAt": "2026-11-09T10:15:00.000Z",
       "createdAt": "2026-11-09T10:15:00.000Z"
     },
@@ -457,7 +457,7 @@
       "departedAt": null,
       "approvalStatus": "APPROVED",
       "entryStatus": "CHECKED_IN",
-      "photoRetainUntil": "2027-02-05T15:22:27.207Z",
+      "photoRetainUntil": "2027-02-05T16:40:01.711Z",
       "recordedAt": "2026-11-09T11:30:00.000Z",
       "createdAt": "2026-11-09T11:30:00.000Z"
     },
@@ -476,7 +476,7 @@
       "departedAt": null,
       "approvalStatus": "PENDING",
       "entryStatus": "EXPECTED",
-      "photoRetainUntil": "2027-02-07T15:22:27.207Z",
+      "photoRetainUntil": "2027-02-07T16:40:01.711Z",
       "recordedAt": "2026-11-09T12:00:00.000Z",
       "createdAt": "2026-11-09T12:00:00.000Z"
     }
@@ -492,12 +492,12 @@
       "codeHash": "969c5333859bb597e7a69c62c8c349ea5148fa6fbfa9d07644b9f8d409374ba7",
       "codeMasked": "84****",
       "codePlain": "842619",
-      "validFrom": "2026-11-08T15:22:27.207Z",
-      "validUntil": "2026-11-11T15:22:27.207Z",
+      "validFrom": "2026-11-08T16:40:01.711Z",
+      "validUntil": "2026-11-11T16:40:01.711Z",
       "usageLimit": 2,
       "usageCount": 0,
       "isActive": true,
-      "createdAt": "2026-11-09T15:22:27.207Z"
+      "createdAt": "2026-11-09T16:40:01.711Z"
     }
   ],
   "amenities": [

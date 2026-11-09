@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Building2, UserCircle2, ArrowRightLeft } from 'lucide-react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Building2, UserCircle2, ArrowRightLeft, LogOut, LogIn } from 'lucide-react';
 import { DEMO_FLATS } from '../fixtures/uiData.js';
+import { ApiClient } from '../services/api.js';
 
 export function RootLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeFlatId, setActiveFlatId] = useState('flat-t07-1203');
   const [activeRole, setActiveRole] = useState<'Resident' | 'Staff' | 'Committee'>('Resident');
 
   const currentFlat = DEMO_FLATS.find((f) => f.id === activeFlatId) || DEMO_FLATS[0];
+  const user = ApiClient.getUser();
+  const token = ApiClient.getToken();
+
+  const handleLogout = () => {
+    ApiClient.clearToken();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-canvas text-text-primary flex flex-col font-sans antialiased">
@@ -32,7 +41,7 @@ export function RootLayout() {
           </Link>
 
           {/* Quick Context & Role Switcher for Testing */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Flat Selector (Resident View) */}
             {location.pathname.startsWith('/resident') && (
               <div className="hidden sm:flex items-center gap-1.5 bg-surface-alt px-2.5 py-1 rounded-control border border-border text-xs">
@@ -57,7 +66,7 @@ export function RootLayout() {
               <Link
                 to="/resident"
                 onClick={() => setActiveRole('Resident')}
-                className={`px-3 py-1.5 rounded-control transition-colors ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-control transition-colors ${
                   location.pathname.startsWith('/resident')
                     ? 'bg-sage-500 text-white font-semibold shadow-xs'
                     : 'text-text-secondary hover:text-text-primary'
@@ -68,18 +77,18 @@ export function RootLayout() {
               <Link
                 to="/staff/complaints"
                 onClick={() => setActiveRole('Staff')}
-                className={`px-3 py-1.5 rounded-control transition-colors ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-control transition-colors ${
                   location.pathname.startsWith('/staff')
                     ? 'bg-walnut-500 text-white font-semibold shadow-xs'
                     : 'text-text-secondary hover:text-text-primary'
                 }`}
               >
-                Staff (Ops)
+                Staff
               </Link>
               <Link
                 to="/committee"
                 onClick={() => setActiveRole('Committee')}
-                className={`px-3 py-1.5 rounded-control transition-colors ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-control transition-colors ${
                   location.pathname.startsWith('/committee')
                     ? 'bg-amber-500 text-white font-semibold shadow-xs'
                     : 'text-text-secondary hover:text-text-primary'
@@ -89,7 +98,7 @@ export function RootLayout() {
               </Link>
               <Link
                 to="/guard"
-                className={`px-3 py-1.5 rounded-control transition-colors ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-control transition-colors ${
                   location.pathname.startsWith('/guard')
                     ? 'bg-walnut-800 text-white font-semibold shadow-xs'
                     : 'text-text-secondary hover:text-text-primary'
@@ -98,6 +107,34 @@ export function RootLayout() {
                 Guard
               </Link>
             </div>
+
+            {/* User Auth Action (Login / Logout) */}
+            {token ? (
+              <div className="flex items-center gap-2 border-l border-border pl-2 sm:pl-3">
+                <span className="hidden lg:inline-flex items-center gap-1.5 text-xs text-text-muted">
+                  <UserCircle2 className="h-4 w-4 text-sage-600" />
+                  <span className="font-semibold text-walnut-900">{user?.name?.split(' ')[0] || 'User'}</span>
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-red-700 hover:bg-red-50 rounded-control transition-colors border border-border sm:border-0"
+                  title="Sign out of Nivasa"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                </button>
+              </div>
+            ) : (
+              <div className="border-l border-border pl-2 sm:pl-3">
+                <Link
+                  to="/login"
+                  className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-sage-800 bg-sage-50 border border-sage-300 hover:bg-sage-100 rounded-control transition-colors"
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                  <span>Sign In</span>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>

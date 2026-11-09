@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, ShieldCheck, ArrowRight, UserCheck } from 'lucide-react';
+import { Building2, ShieldCheck, ArrowRight, UserCheck, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button.js';
+import { ApiClient } from '../services/api.js';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -9,43 +10,72 @@ export function LoginPage() {
   const [otp, setOtp] = useState('123456');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRequestOtp = (e: React.FormEvent) => {
+  const navigateByRole = (role: string, targetOverride?: string) => {
+    if (targetOverride) {
+      navigate(targetOverride);
+      return;
+    }
+    if (role === 'GUARD') {
+      navigate('/guard');
+    } else if (role === 'COMMITTEE') {
+      navigate('/committee');
+    } else if (role === 'ACCOUNTS') {
+      navigate('/staff/reconciliation');
+    } else if (role === 'HELPDESK') {
+      navigate('/staff/complaints');
+    } else {
+      navigate('/resident');
+    }
+  };
+
+  const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await ApiClient.requestOtp(phone);
       setStep('otp');
-    }, 400);
-  };
-
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP. Please check the mobile number.');
+    } finally {
       setLoading(false);
-      if (phone.includes('9876543210') || phone.includes('9876543211')) {
-        navigate('/staff/complaints');
-      } else if (phone.includes('9876543212')) {
-        navigate('/committee');
-      } else {
-        navigate('/resident');
-      }
-    }, 400);
+    }
   };
 
-  const handleQuickLogin = (demoPhone: string, targetPath: string) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await ApiClient.verifyOtp(phone, otp);
+      navigateByRole(res.user.role);
+    } catch (err: any) {
+      setError(err.message || 'Invalid verification code. Please enter 123456 in dev mode.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (demoPhone: string, targetPath: string) => {
+    setError(null);
     setPhone(demoPhone);
     setOtp('123456');
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await ApiClient.verifyOtp(demoPhone, '123456');
+      navigate(targetPath || (res.user.role === 'GUARD' ? '/guard' : '/resident'));
+    } catch (err: any) {
+      // In case backend is not reached, route to path
       navigate(targetPath);
-    }, 200);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-[85vh] flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-md rounded-surface border border-border bg-surface p-6 sm:p-8 shadow-sm">
         {/* Header */}
         <div className="text-center mb-6">
@@ -57,6 +87,13 @@ export function LoginPage() {
             Gated Society Operations & Community Management
           </p>
         </div>
+
+        {error && (
+          <div className="mb-4 flex items-center gap-2 rounded-control bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
 
         {/* OTP Flow */}
         {step === 'phone' ? (
@@ -81,7 +118,7 @@ export function LoginPage() {
                 />
               </div>
               <p className="mt-1.5 text-[11px] text-text-muted">
-                Demo OTP <code className="text-sage-700 font-bold">123456</code> is enabled for testing.
+                Development OTP <code className="text-sage-700 font-bold">123456</code> is enabled.
               </p>
             </div>
 
@@ -113,7 +150,7 @@ export function LoginPage() {
                 className="w-full rounded-control border border-border px-3 py-2 text-center text-lg tracking-widest text-text-primary focus:outline-none focus:border-sage-500 font-mono font-bold"
               />
               <p className="mt-1.5 text-center text-[11px] text-text-muted">
-                Sent to +91 {phone}
+                Sent to +91 {phone} • Enter 123456
               </p>
             </div>
 
@@ -124,9 +161,9 @@ export function LoginPage() {
         )}
 
         {/* Quick Demo Profile Logins for Fast Review */}
-        <div className="mt-8 pt-6 border-t border-border">
+        <div className="mt-6 pt-5 border-t border-border">
           <p className="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-2.5 text-center">
-            One-Click Demo Profiles (TDD.md Fixtures)
+            One-Click Authoritative Seed Profiles
           </p>
           <div className="grid grid-cols-1 gap-2 text-xs">
             <button
@@ -135,7 +172,7 @@ export function LoginPage() {
             >
               <div>
                 <span className="font-semibold text-walnut-900">Neeraj Kulkarni</span>
-                <span className="text-[11px] text-text-muted block">Flat T07-1203 • Paid ₹7,475</span>
+                <span className="text-[11px] text-text-muted block">Flat T07-1203 • Maintenance Paid</span>
               </div>
               <span className="text-[10px] font-semibold text-sage-700 bg-sage-50 px-2 py-0.5 rounded-full border border-sage-200">
                 Resident (Owner)
@@ -148,10 +185,23 @@ export function LoginPage() {
             >
               <div>
                 <span className="font-semibold text-walnut-900">Swati Joshi</span>
-                <span className="text-[11px] text-amber-700 block">Flat T12-0408 • 47 Days Overdue</span>
+                <span className="text-[11px] text-amber-700 block">Flat T12-0408 • Overdue Dues</span>
               </div>
               <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                 Resident (Tenant)
+              </span>
+            </button>
+
+            <button
+              onClick={() => handleQuickLogin('9876543213', '/guard')}
+              className="flex items-center justify-between p-2 rounded-control border border-border hover:bg-walnut-50/50 text-left transition-colors"
+            >
+              <div>
+                <span className="font-semibold text-walnut-900">Security Guard</span>
+                <span className="text-[11px] text-text-muted block">Main Gate 1 • Tablet Terminal</span>
+              </div>
+              <span className="text-[10px] font-semibold text-walnut-900 bg-walnut-50 px-2 py-0.5 rounded-full border border-walnut-200">
+                Security Guard
               </span>
             </button>
 
@@ -199,4 +249,3 @@ export function LoginPage() {
     </div>
   );
 }
-

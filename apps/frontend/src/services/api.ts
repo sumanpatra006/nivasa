@@ -90,7 +90,70 @@ export class ApiClient {
     this.token = null;
     try {
       localStorage.removeItem('nivasa_auth_token');
+      localStorage.removeItem('nivasa_user_profile');
     } catch {}
+  }
+
+  public static async requestOtp(phone: string): Promise<{ message: string; phone: string; isDevMode: boolean }> {
+    const res = await fetch(`${API_BASE_URL}/auth/request-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(body.message || body.error || 'Failed to request OTP');
+    }
+    return body;
+  }
+
+  public static async verifyOtp(
+    phone: string,
+    otp: string
+  ): Promise<{
+    token: string;
+    user: {
+      id?: string;
+      phone: string;
+      role: string;
+      name: string;
+      flatIds: string[];
+    };
+  }> {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.message || data.error || 'Invalid or expired OTP');
+    }
+
+    this.setToken(data.token);
+    try {
+      localStorage.setItem('nivasa_user_profile', JSON.stringify(data.user));
+    } catch {}
+
+    return data;
+  }
+
+  public static getUser(): { id?: string; phone: string; role: string; name: string; flatIds: string[] } | null {
+    try {
+      const raw = localStorage.getItem('nivasa_user_profile');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  public static async logout(): Promise<void> {
+    try {
+      await this.request('/auth/logout', { method: 'POST' });
+    } catch {}
+    this.clearToken();
   }
 
   /**

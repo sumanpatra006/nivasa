@@ -1,0 +1,21 @@
+{
+  "name": "Nivasa — Residential Township Management",
+  "short_name": "Nivasa",
+  "description": "Smart gated society management platform for maintenance billing, gate passes, complaints, and amenity bookings.",
+  "start_url": "/resident",
+  "id": "/resident",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FDFBF7",
+  "theme_color": "#315444",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "screenshots": []
+}

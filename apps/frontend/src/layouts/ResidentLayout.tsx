@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, NavLink, useOutletContext } from 'react-router-dom';
 import { Home, Receipt, Wrench, Users, CalendarCheck } from 'lucide-react';
 import { DemoFlat } from '../fixtures/uiData.js';
+import { PwaInstallBanner } from '../components/PwaInstallBanner.js';
 
 export function ResidentLayout() {
   const { currentFlat } = useOutletContext<{ currentFlat: DemoFlat }>();
@@ -16,6 +17,9 @@ export function ResidentLayout() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
+      {/* PWA Download Banner for Residents */}
+      <PwaInstallBanner />
+
       {/* Resident Identity Banner */}
       <div className="mb-6 rounded-surface border border-border bg-surface p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
         <div>

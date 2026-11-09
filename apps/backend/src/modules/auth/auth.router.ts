@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { RequestOtpSchema, VerifyOtpSchema, USER_ROLES, UserRole } from '@nivasa/shared';
 import { env } from '../../config/env.js';
+import { prisma } from '../../config/prisma.js';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
 
 export const authRouter = Router();
@@ -29,7 +30,7 @@ authRouter.post('/request-otp', (req: Request, res: Response) => {
   });
 });
 
-authRouter.post('/verify-otp', (req: Request, res: Response) => {
+authRouter.post('/verify-otp', async (req: Request, res: Response) => {
   const parsed = VerifyOtpSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Validation Error', details: parsed.error.format() });
@@ -48,42 +49,95 @@ authRouter.post('/verify-otp', (req: Request, res: Response) => {
     return;
   }
 
-  // Demo user assignment based on authoritative seed accounts
+  // Look up user from Neon PostgreSQL Database first
   let role: UserRole = USER_ROLES.RESIDENT;
   let flatIds: string[] = ['flat-t07-1203'];
   let name = 'Resident User';
+  let userId = `user-${phone}`;
 
-  if (phone === '9876543210') {
-    role = USER_ROLES.HELPDESK;
-    flatIds = [];
-    name = 'Ramesh Sawant (Helpdesk Duty)';
-  } else if (phone === '9876543211') {
-    role = USER_ROLES.ACCOUNTS;
-    flatIds = [];
-    name = 'Pooja Mehta (Accounts Officer)';
-  } else if (phone === '9876543212') {
-    role = USER_ROLES.COMMITTEE;
-    flatIds = [];
-    name = 'Dr. Vikram Deshmukh (Secretary)';
-  } else if (phone === '9876543213') {
-    role = USER_ROLES.GUARD;
-    flatIds = [];
-    name = 'Security Guard (Gate 1)';
-  } else if (phone === '9820000002') {
-    role = USER_ROLES.RESIDENT;
-    flatIds = ['flat-t12-0408'];
-    name = 'Swati Joshi';
-  } else if (phone === '9820000003') {
-    role = USER_ROLES.RESIDENT;
-    flatIds = ['flat-t21-1601'];
-    name = 'Aamir Shaikh';
-  } else {
-    name = 'Neeraj Kulkarni';
+  try {
+    const dbUser = await prisma.user.findUnique({
+      where: { phone },
+      include: {
+        flatMemberships: {
+          include: { flat: true },
+        },
+      },
+    });
+
+    if (dbUser) {
+      userId = dbUser.id;
+      name = dbUser.name;
+      role = dbUser.role as UserRole;
+      if (dbUser.flatMemberships && dbUser.flatMemberships.length > 0) {
+        flatIds = dbUser.flatMemberships.map((m: any) => m.flatId);
+      } else {
+        flatIds = [];
+      }
+    } else {
+      // Deterministic fallback assignment when user not found in DB
+      if (phone === '9876543210') {
+        role = USER_ROLES.HELPDESK;
+        flatIds = [];
+        name = 'Ramesh Sawant (Helpdesk Duty)';
+      } else if (phone === '9876543211') {
+        role = USER_ROLES.ACCOUNTS;
+        flatIds = [];
+        name = 'Pooja Mehta (Accounts Officer)';
+      } else if (phone === '9876543212') {
+        role = USER_ROLES.COMMITTEE;
+        flatIds = [];
+        name = 'Dr. Vikram Deshmukh (Secretary)';
+      } else if (phone === '9876543213') {
+        role = USER_ROLES.GUARD;
+        flatIds = [];
+        name = 'Security Guard (Gate 1)';
+      } else if (phone === '9820000002') {
+        role = USER_ROLES.RESIDENT;
+        flatIds = ['flat-t12-0408'];
+        name = 'Swati Joshi';
+      } else if (phone === '9820000003') {
+        role = USER_ROLES.RESIDENT;
+        flatIds = ['flat-t21-1601'];
+        name = 'Aamir Shaikh';
+      } else {
+        name = 'Neeraj Kulkarni';
+      }
+    }
+  } catch {
+    // Deterministic fallback assignment when database is unreachable / offline
+    if (phone === '9876543210') {
+      role = USER_ROLES.HELPDESK;
+      flatIds = [];
+      name = 'Ramesh Sawant (Helpdesk Duty)';
+    } else if (phone === '9876543211') {
+      role = USER_ROLES.ACCOUNTS;
+      flatIds = [];
+      name = 'Pooja Mehta (Accounts Officer)';
+    } else if (phone === '9876543212') {
+      role = USER_ROLES.COMMITTEE;
+      flatIds = [];
+      name = 'Dr. Vikram Deshmukh (Secretary)';
+    } else if (phone === '9876543213') {
+      role = USER_ROLES.GUARD;
+      flatIds = [];
+      name = 'Security Guard (Gate 1)';
+    } else if (phone === '9820000002') {
+      role = USER_ROLES.RESIDENT;
+      flatIds = ['flat-t12-0408'];
+      name = 'Swati Joshi';
+    } else if (phone === '9820000003') {
+      role = USER_ROLES.RESIDENT;
+      flatIds = ['flat-t21-1601'];
+      name = 'Aamir Shaikh';
+    } else {
+      name = 'Neeraj Kulkarni';
+    }
   }
 
   const token = jwt.sign(
     {
-      id: `user-${phone}`,
+      id: userId,
       phone,
       role,
       flatIds,
