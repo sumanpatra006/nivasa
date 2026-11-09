@@ -15,8 +15,32 @@ export const complaintsRouter = Router();
 
 complaintsRouter.use(authMiddleware);
 
-// In-memory complaints store
-const mockComplaints: any[] = [
+export interface ComplaintRecord {
+  id: string;
+  residentId: string;
+  flatId: string;
+  title: string;
+  description: string;
+  category: ComplaintCategory;
+  urgency: ComplaintUrgency;
+  status: string;
+  assignedTo?: string | null;
+  createdAt: string;
+  isSafetyEscalation: boolean;
+  safetyReason?: string | null;
+  duplicateOfId?: string | null;
+  duplicateLinks: string[];
+  reopenCount: number;
+  timeline: Array<{
+    id: string;
+    message: string;
+    actor?: string;
+    createdAt: string;
+  }>;
+}
+
+// In-memory complaints store initialized with authoritative seed
+const mockComplaints: ComplaintRecord[] = [
   {
     id: 'cmp-01',
     residentId: 'user-9820000002',
@@ -29,9 +53,12 @@ const mockComplaints: any[] = [
     assignedTo: 'Plumbing Duty Team',
     createdAt: '2026-11-01T08:30:00Z',
     isSafetyEscalation: false,
+    duplicateOfId: null,
+    duplicateLinks: [],
+    reopenCount: 0,
     timeline: [
-      { id: 'tl-1', message: 'Complaint registered by resident Swati Joshi', createdAt: '2026-11-01T08:30:00Z' },
-      { id: 'tl-2', message: 'Assigned to Plumbing Duty Team by Ramesh Sawant', createdAt: '2026-11-01T09:15:00Z' },
+      { id: 'tl-1', message: 'Complaint registered by resident Swati Joshi', actor: 'Swati Joshi', createdAt: '2026-11-01T08:30:00Z' },
+      { id: 'tl-2', message: 'Assigned to Plumbing Duty Team by Ramesh Sawant', actor: 'Ramesh Sawant', createdAt: '2026-11-01T09:15:00Z' },
     ],
   },
 ];
@@ -55,28 +82,30 @@ complaintsRouter.post('/', (req: Request, res: Response) => {
 
   const { title, description, flatId } = parsed.data;
 
-  // 1. Deterministic safety check
+  // 1. Deterministic safety check (Safety takes absolute precedence over any AI output)
   const safetyCheck = checkSafetyEscalation(title, description);
 
-  // 2. Default categorization
+  // 2. Default categorization / deterministic classification fallback
   let category: ComplaintCategory = COMPLAINT_CATEGORY.OTHER;
-  const descLower = description.toLowerCase();
-  if (descLower.includes('water') || descLower.includes('leak') || descLower.includes('pipe') || descLower.includes('tap')) {
+  const descLower = `${title} ${description}`.toLowerCase();
+  if (descLower.includes('water') || descLower.includes('leak') || descLower.includes('pipe') || descLower.includes('tap') || descLower.includes('drain')) {
     category = COMPLAINT_CATEGORY.PLUMBING;
-  } else if (descLower.includes('power') || descLower.includes('light') || descLower.includes('switch') || descLower.includes('spark')) {
+  } else if (descLower.includes('power') || descLower.includes('light') || descLower.includes('switch') || descLower.includes('spark') || descLower.includes('electric')) {
     category = COMPLAINT_CATEGORY.ELECTRICAL;
   } else if (descLower.includes('lift') || descLower.includes('elevator')) {
     category = COMPLAINT_CATEGORY.LIFT;
-  } else if (descLower.includes('clean') || descLower.includes('garbage')) {
+  } else if (descLower.includes('clean') || descLower.includes('garbage') || descLower.includes('dust')) {
     category = COMPLAINT_CATEGORY.CLEANING;
+  } else if (descLower.includes('guard') || descLower.includes('gate') || descLower.includes('security')) {
+    category = COMPLAINT_CATEGORY.SECURITY;
   }
 
-  // 3. Urgency rules (Safety override takes absolute precedence)
+  // 3. Urgency rules (Safety override forces CRITICAL)
   const urgency: ComplaintUrgency = safetyCheck.isSafetyEscalation
     ? COMPLAINT_URGENCY.CRITICAL
     : COMPLAINT_URGENCY.NORMAL;
 
-  const newComplaint = {
+  const newComplaint: ComplaintRecord = {
     id: `cmp-${Date.now()}`,
     residentId: req.user!.id,
     flatId,
@@ -85,19 +114,32 @@ complaintsRouter.post('/', (req: Request, res: Response) => {
     category,
     urgency,
     status: COMPLAINT_STATUS.NEW,
+    assignedTo: null,
     isSafetyEscalation: safetyCheck.isSafetyEscalation,
-    safetyReason: safetyCheck.reason,
+    safetyReason: safetyCheck.reason || null,
+    duplicateOfId: null,
+    duplicateLinks: [],
+    reopenCount: 0,
     createdAt: new Date().toISOString(),
     timeline: [
       {
-        id: `tl-${Date.now()}`,
-        message: safetyCheck.isSafetyEscalation
-          ? `AUTOMATED SAFETY ESCALATION TRIGGERED: ${safetyCheck.reason}`
-          : 'Complaint registered by resident',
+        id: `tl-${Date.now()}-reg`,
+        message: 'Complaint registered by resident',
+        actor: req.user!.name || req.user!.phone,
         createdAt: new Date().toISOString(),
       },
     ],
   };
+
+  // If safety escalation triggered, append dedicated automated timeline entry
+  if (safetyCheck.isSafetyEscalation) {
+    newComplaint.timeline.push({
+      id: `tl-${Date.now()}-safety`,
+      message: `AUTOMATED SAFETY ESCALATION TRIGGERED: ${safetyCheck.reason}`,
+      actor: 'System Safety Monitor',
+      createdAt: new Date().toISOString(),
+    });
+  }
 
   mockComplaints.unshift(newComplaint);
 
@@ -127,6 +169,7 @@ complaintsRouter.patch('/:id/category', (req: Request, res: Response) => {
   complaint.timeline.push({
     id: `tl-${Date.now()}`,
     message: `Category reclassified to ${category} by staff`,
+    actor: req.user!.name || req.user!.phone,
     createdAt: new Date().toISOString(),
   });
 
@@ -142,12 +185,63 @@ complaintsRouter.patch('/:id/status', (req: Request, res: Response) => {
     return;
   }
 
+  // Validate allowed status transitions
+  const validStatuses = Object.values(COMPLAINT_STATUS);
+  if (!validStatuses.includes(status)) {
+    res.status(400).json({ error: 'Invalid complaint status' });
+    return;
+  }
+
+  if (status === COMPLAINT_STATUS.REOPENED) {
+    complaint.reopenCount += 1;
+  }
+
   complaint.status = status;
   complaint.timeline.push({
     id: `tl-${Date.now()}`,
     message: `Status transitioned to ${status}${comment ? `: ${comment}` : ''}`,
+    actor: req.user!.name || req.user!.phone,
     createdAt: new Date().toISOString(),
   });
 
   res.status(200).json({ complaint });
+});
+
+// Link duplicate complaint (never silently deletes; preserves links)
+complaintsRouter.post('/:id/link-duplicate', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { duplicateId } = req.body;
+
+  const primary = mockComplaints.find((c) => c.id === id);
+  const duplicate = mockComplaints.find((c) => c.id === duplicateId);
+
+  if (!primary || !duplicate) {
+    res.status(404).json({ error: 'One or both complaints not found' });
+    return;
+  }
+
+  duplicate.duplicateOfId = primary.id;
+  if (!primary.duplicateLinks.includes(duplicate.id)) {
+    primary.duplicateLinks.push(duplicate.id);
+  }
+
+  primary.timeline.push({
+    id: `tl-${Date.now()}-dup-pri`,
+    message: `Linked duplicate complaint ${duplicate.id} ("${duplicate.title}")`,
+    actor: req.user!.name || req.user!.phone,
+    createdAt: new Date().toISOString(),
+  });
+
+  duplicate.timeline.push({
+    id: `tl-${Date.now()}-dup-sec`,
+    message: `Marked as linked duplicate of primary complaint ${primary.id}`,
+    actor: req.user!.name || req.user!.phone,
+    createdAt: new Date().toISOString(),
+  });
+
+  res.status(200).json({
+    message: 'Duplicate complaint linked successfully',
+    primary,
+    duplicate,
+  });
 });
