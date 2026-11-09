@@ -1,0 +1,33 @@
+{
+  "name": "nivasa-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nivasa — Residential Society Operations Platform",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c green,blue \"npm run dev -w @nivasa/backend\" \"npm run dev -w @nivasa/frontend\"",
+    "build": "npm run build -w @nivasa/shared && npm run build -w @nivasa/backend && npm run build -w @nivasa/frontend",
+    "typecheck": "npm run typecheck -w @nivasa/shared && npm run typecheck -w @nivasa/backend && npm run typecheck -w @nivasa/frontend",
+    "lint": "eslint \"packages/*/src/**/*.{ts,tsx}\" \"apps/*/src/**/*.{ts,tsx}\"",
+    "test": "npm run test -w @nivasa/shared && npm run test -w @nivasa/backend && npm run test -w @nivasa/frontend",
+    "test:e2e": "vitest run apps/backend/src/test/health.test.ts",
+    "db:migrate": "npm run db:migrate -w @nivasa/backend",
+    "db:seed": "npm run db:seed -w @nivasa/backend",
+    "prisma:validate": "npm run prisma:validate -w @nivasa/backend",
+    "prisma:generate": "npm run prisma:generate -w @nivasa/backend"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@types/node": "^22.10.1",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.16.0",
+    "globals": "^15.13.0",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^2.1.8"
+  }
+}
+

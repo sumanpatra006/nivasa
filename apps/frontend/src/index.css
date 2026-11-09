@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-sage: #87A96B;
+    --color-walnut: #5A3E2B;
+    --color-amber: #D5851F;
+    --color-canvas: #F7F7F4;
+    --color-surface: #FFFFFF;
+    --color-border: #E5E7DF;
+  }
+
+  body {
+    background-color: #F7F7F4;
+    color: #242821;
+    font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+}
+
