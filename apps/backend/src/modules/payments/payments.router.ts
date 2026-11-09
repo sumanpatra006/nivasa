@@ -1,137 +1,217 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
-import { InitiatePaymentSchema } from '@nivasa/shared';
-import { addLedgerEntry, getLedgerEntries } from '../ledger/ledgerStore.js';
+import { USER_ROLES } from '@nivasa/shared';
+import { societyStore, PaymentRecord, ReceiptRecord, LedgerEntryRecord } from '../billing/societyStore.js';
 
 export const paymentsRouter = Router();
 
 paymentsRouter.use(authMiddleware);
 
-export interface PaymentRecord {
-  id: string;
-  invoiceId: string;
-  flatId: string;
-  amountPaise: number;
-  idempotencyKey: string;
-  provider: string;
-  providerReference: string;
-  status: 'INITIATED' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
-  createdAt: string;
-  paidAt?: string | null;
-  receipt?: {
-    id: string;
-    receiptNumber: string;
-    paymentId: string;
-    amountPaise: number;
-    issuedAt: string;
-  } | null;
-}
-
-// In-memory payment idempotency & record store
-const paymentRecords = new Map<string, PaymentRecord>();
-
+// POST /api/v1/payments/initiate - Initiate mock gateway payment session
 paymentsRouter.post('/initiate', (req: Request, res: Response) => {
-  const parsed = InitiatePaymentSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: 'Validation Error', details: parsed.error.format() });
+  const { invoiceId, amountPaise, idempotencyKey } = req.body;
+  const user = req.user!;
+
+  if (!idempotencyKey || typeof idempotencyKey !== 'string') {
+    res.status(400).json({ error: 'Validation Error', message: 'A unique idempotencyKey is required.' });
     return;
   }
 
-  const { invoiceId, amountPaise, idempotencyKey } = parsed.data;
-
-  // Enforce idempotency: if key exists, return existing record without creating a new one
-  if (paymentRecords.has(idempotencyKey)) {
+  // Idempotency check: if already initiated or processed with this key, return existing record
+  const existingPayment = societyStore.getPaymentByIdempotencyKey(idempotencyKey);
+  if (existingPayment) {
     res.status(200).json({
       message: 'Idempotent replay: existing payment returned',
-      payment: paymentRecords.get(idempotencyKey),
+      payment: existingPayment,
     });
     return;
   }
 
-  // Derive flatId from user context or invoice
-  const flatId = req.user?.flatIds?.[0] || 'flat-t07-1203';
+  if (!invoiceId || typeof invoiceId !== 'string') {
+    res.status(400).json({ error: 'Validation Error', message: 'invoiceId is required.' });
+    return;
+  }
+
+  const invoice = societyStore.getInvoiceById(invoiceId);
+  if (!invoice) {
+    res.status(404).json({ error: 'Not Found', message: `Invoice ${invoiceId} not found.` });
+    return;
+  }
+
+  // Horizontal flat authorization check: resident can only pay for their own registered flat
+  if (user.role === USER_ROLES.RESIDENT && !user.flatIds.includes(invoice.flatId)) {
+    res.status(403).json({
+      error: 'Forbidden',
+      message: 'Unauthorized: You cannot initiate payment for another flat.',
+    });
+    return;
+  }
+
+  // Amount validations
+  if (typeof amountPaise !== 'number' || !Number.isInteger(amountPaise) || amountPaise <= 0) {
+    res.status(400).json({
+      error: 'Invalid Amount',
+      message: 'Payment amount must be a positive integer in paise.',
+    });
+    return;
+  }
+
+  if (amountPaise > invoice.remainingBalancePaise) {
+    res.status(400).json({
+      error: 'Excessive Amount',
+      message: `Payment amount (${amountPaise} paise) exceeds remaining invoice balance (${invoice.remainingBalancePaise} paise).`,
+    });
+    return;
+  }
 
   const payment: PaymentRecord = {
     id: `pay-${Date.now()}`,
-    invoiceId,
-    flatId,
+    invoiceId: invoice.id,
+    flatId: invoice.flatId,
     amountPaise,
     idempotencyKey,
     provider: 'MOCK_GATEWAY',
-    providerReference: `MOCK-REF-${Math.floor(100000 + Math.random() * 900000)}`,
+    providerReference: `MOCK-UPI-${Math.floor(100000 + Math.random() * 900000)}`,
     status: 'INITIATED',
     createdAt: new Date().toISOString(),
-    receipt: null,
+    receiptId: null,
   };
 
-  paymentRecords.set(idempotencyKey, payment);
+  societyStore.savePayment(payment);
 
   res.status(201).json({ payment });
 });
 
+// POST /api/v1/payments/verify - Process mock provider outcome
 paymentsRouter.post('/verify', (req: Request, res: Response) => {
-  const { idempotencyKey, outcome = 'SUCCESS' } = req.body;
-  if (!idempotencyKey || !paymentRecords.has(idempotencyKey)) {
-    res.status(404).json({ error: 'Not Found', message: 'Payment record not found' });
+  const { idempotencyKey, outcome = 'SUCCESS', simulateFailure = false } = req.body;
+
+  if (!idempotencyKey) {
+    res.status(400).json({ error: 'Validation Error', message: 'idempotencyKey is required for verification.' });
     return;
   }
 
-  const payment = paymentRecords.get(idempotencyKey)!;
+  const payment = societyStore.getPaymentByIdempotencyKey(idempotencyKey);
+  if (!payment) {
+    res.status(404).json({ error: 'Not Found', message: 'Payment record not found for this idempotency key.' });
+    return;
+  }
 
-  // If already verified as SUCCESS, return existing receipt idempotently
-  if (payment.status === 'SUCCESS' && payment.receipt) {
+  // If already verified as SUCCESS, return existing record and receipt idempotently
+  if (payment.status === 'SUCCESS' && payment.receiptId) {
+    const existingReceipt = societyStore.getReceiptById(payment.receiptId);
+    const invoice = societyStore.getInvoiceById(payment.invoiceId);
     res.status(200).json({
-      message: 'Payment already verified (idempotent response)',
+      message: 'Payment already verified (idempotent replay)',
       payment,
-      receipt: payment.receipt,
+      receipt: existingReceipt,
+      invoice,
     });
     return;
   }
 
-  payment.status = outcome === 'SUCCESS' ? 'SUCCESS' : 'FAILED';
-  payment.paidAt = outcome === 'SUCCESS' ? new Date().toISOString() : null;
+  // Handle deterministic failure
+  if (simulateFailure === true || outcome === 'FAILED') {
+    payment.status = 'FAILED';
+    payment.failureReason = 'Card/UPI gateway declined by issuing bank (Simulated failure)';
+    societyStore.savePayment(payment);
 
-  if (outcome === 'SUCCESS') {
-    const receipt = {
-      id: `rec-${Date.now()}`,
-      receiptNumber: `REC-202611-${Math.floor(10000 + Math.random() * 90000)}`,
-      paymentId: payment.id,
-      amountPaise: payment.amountPaise,
-      issuedAt: new Date().toISOString(),
-    };
-    payment.receipt = receipt;
-
-    // Atomically append to ledger
-    addLedgerEntry({
-      id: `led-${Date.now()}`,
-      flatId: payment.flatId,
-      entryType: 'PAYMENT',
-      amountPaise: payment.amountPaise,
-      description: `Online Payment via Mock Gateway (${payment.providerReference})`,
-      createdAt: new Date().toISOString(),
+    res.status(200).json({
+      message: 'Payment verification failed at gateway',
+      payment,
+      receipt: null,
     });
-
-    res.status(200).json({ payment, receipt });
     return;
   }
 
-  res.status(200).json({ payment, receipt: null });
+  // Process SUCCESS outcome
+  const invoice = societyStore.getInvoiceById(payment.invoiceId);
+  if (!invoice) {
+    res.status(404).json({ error: 'Not Found', message: 'Target invoice not found for payment posting.' });
+    return;
+  }
+
+  payment.status = 'SUCCESS';
+  payment.paidAt = new Date().toISOString();
+
+  // 1. Generate sequential official receipt
+  const receiptNumber = `REC-202611-${String(societyStore.getReceipts().length + 1).padStart(4, '0')}`;
+  const receipt: ReceiptRecord = {
+    id: `rec-${Date.now()}`,
+    receiptNumber,
+    paymentId: payment.id,
+    invoiceId: invoice.id,
+    flatId: invoice.flatId,
+    flatIdentifier: `${invoice.tower}-${invoice.flatNumber}`,
+    residentName: invoice.residentName,
+    billingPeriod: invoice.billingPeriod === '2026-11' ? 'November 2026' : invoice.billingPeriod,
+    amountPaise: payment.amountPaise,
+    paymentReference: payment.providerReference,
+    date: payment.paidAt,
+  };
+
+  societyStore.saveReceipt(receipt);
+  payment.receiptId = receipt.id;
+  societyStore.savePayment(payment);
+
+  // 2. Update target invoice status and balance in integer paise
+  invoice.paidAmountPaise += payment.amountPaise;
+  invoice.remainingBalancePaise = Math.max(0, invoice.totalAmountPaise - invoice.paidAmountPaise);
+  invoice.status = invoice.remainingBalancePaise === 0 ? 'PAID' : 'PARTIALLY_PAID';
+  societyStore.updateInvoice(invoice);
+
+  // 3. Atomically append to immutable flat ledger
+  const ledgerEntry: LedgerEntryRecord = {
+    id: `led-${Date.now()}`,
+    flatId: invoice.flatId,
+    entryType: 'PAYMENT',
+    amountPaise: payment.amountPaise,
+    description: `Online Payment (Ref: ${payment.providerReference})`,
+    reference: payment.providerReference,
+    createdAt: payment.paidAt,
+  };
+  societyStore.addLedgerEntry(ledgerEntry);
+
+  res.status(200).json({
+    message: 'Payment verified and posted successfully',
+    payment,
+    receipt,
+    invoice,
+    ledgerEntry,
+  });
 });
 
+// GET /api/v1/payments/receipts - Fetch receipts for authorized flats
 paymentsRouter.get('/receipts', (req: Request, res: Response) => {
-  const receipts = Array.from(paymentRecords.values())
-    .filter((p) => p.status === 'SUCCESS' && p.receipt)
-    .map((p) => p.receipt);
+  const user = req.user!;
+  const allReceipts = societyStore.getReceipts();
 
-  if (receipts.length === 0) {
-    receipts.push({
-      id: 'rec-sample-01',
-      receiptNumber: 'REC-202611-0001',
-      paymentId: 'pay-sample-01',
-      amountPaise: 747500,
-      issuedAt: '2026-11-01T10:00:00Z',
-    });
+  if (user.role === USER_ROLES.RESIDENT) {
+    const userReceipts = allReceipts.filter((r) => user.flatIds.includes(r.flatId));
+    res.status(200).json({ receipts: userReceipts });
+    return;
   }
 
-  res.status(200).json({ receipts });
+  res.status(200).json({ receipts: allReceipts });
+});
+
+// GET /api/v1/payments/receipts/:id - Fetch single receipt by ID or number
+paymentsRouter.get('/receipts/:id', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const user = req.user!;
+  const receipt =
+    societyStore.getReceiptById(id) ||
+    societyStore.getReceipts().find((r) => r.receiptNumber === id);
+
+  if (!receipt) {
+    res.status(404).json({ error: 'Not Found', message: `Receipt ${id} not found.` });
+    return;
+  }
+
+  if (user.role === USER_ROLES.RESIDENT && !user.flatIds.includes(receipt.flatId)) {
+    res.status(403).json({ error: 'Forbidden', message: 'Unauthorized: You cannot view receipts for another flat.' });
+    return;
+  }
+
+  res.status(200).json({ receipt });
 });

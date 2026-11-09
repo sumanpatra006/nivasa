@@ -71,3 +71,4 @@ describe('Billing Calculations and Invoices', () => {
     expect(invoicesRes.body.invoices.length).toBeGreaterThanOrEqual(3);
   });
 });
+

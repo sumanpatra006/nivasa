@@ -42,3 +42,4 @@ describe('Late Fee Calculation', () => {
     expect(calculateLateFeePaise(7, customPolicy)).toBe(11000); // 10000 + 2 * 500
   });
 });
+

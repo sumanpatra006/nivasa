@@ -1,0 +1,212 @@
+{
+  "invoices": [
+    {
+      "id": "inv-t07-1203-202611",
+      "flatId": "flat-t07-1203",
+      "tower": "T07",
+      "flatNumber": "1203",
+      "residentName": "Neeraj Kulkarni",
+      "residentPhone": "9820000001",
+      "billingPeriod": "2026-11",
+      "areaSqFt": 1150,
+      "ratePerSqFtPaise": 650,
+      "baseAmountPaise": 747500,
+      "lateFeePaise": 0,
+      "totalAmountPaise": 747500,
+      "paidAmountPaise": 747500,
+      "remainingBalancePaise": 0,
+      "dueDate": "2026-11-10T00:00:00Z",
+      "status": "PAID",
+      "daysOverdue": 0
+    },
+    {
+      "id": "inv-t12-0408-202611",
+      "flatId": "flat-t12-0408",
+      "tower": "T12",
+      "flatNumber": "0408",
+      "residentName": "Swati Joshi",
+      "residentPhone": "9820000002",
+      "billingPeriod": "2026-11",
+      "areaSqFt": 980,
+      "ratePerSqFtPaise": 650,
+      "baseAmountPaise": 637000,
+      "lateFeePaise": 62000,
+      "totalAmountPaise": 699000,
+      "paidAmountPaise": 699000,
+      "remainingBalancePaise": 0,
+      "dueDate": "2026-09-24T00:00:00Z",
+      "status": "PAID",
+      "daysOverdue": 47
+    },
+    {
+      "id": "inv-t21-1601-202611",
+      "flatId": "flat-t21-1601",
+      "tower": "T21",
+      "flatNumber": "1601",
+      "residentName": "Aamir Shaikh",
+      "residentPhone": "9820000003",
+      "billingPeriod": "2026-11",
+      "areaSqFt": 1640,
+      "ratePerSqFtPaise": 650,
+      "baseAmountPaise": 1066000,
+      "lateFeePaise": 33000,
+      "totalAmountPaise": 1099000,
+      "paidAmountPaise": 500000,
+      "remainingBalancePaise": 599000,
+      "dueDate": "2026-10-23T00:00:00Z",
+      "status": "PARTIALLY_PAID",
+      "daysOverdue": 18
+    }
+  ],
+  "payments": [
+    {
+      "id": "pay-seed-01",
+      "invoiceId": "inv-t07-1203-202611",
+      "flatId": "flat-t07-1203",
+      "amountPaise": 747500,
+      "idempotencyKey": "idemp-seed-01",
+      "provider": "MOCK_GATEWAY",
+      "providerReference": "MOCK-UPI-98201",
+      "status": "SUCCESS",
+      "createdAt": "2026-11-01T10:00:00Z",
+      "paidAt": "2026-11-01T10:01:00Z",
+      "receiptId": "rec-seed-01"
+    },
+    {
+      "id": "pay-seed-02",
+      "invoiceId": "inv-t21-1601-202611",
+      "flatId": "flat-t21-1601",
+      "amountPaise": 500000,
+      "idempotencyKey": "idemp-seed-02",
+      "provider": "MOCK_GATEWAY",
+      "providerReference": "MOCK-UPI-98202",
+      "status": "SUCCESS",
+      "createdAt": "2026-11-03T11:00:00Z",
+      "paidAt": "2026-11-03T11:02:00Z",
+      "receiptId": "rec-seed-02"
+    },
+    {
+      "id": "pay-1794219162376",
+      "invoiceId": "inv-t12-0408-202611",
+      "flatId": "flat-t12-0408",
+      "amountPaise": 699000,
+      "idempotencyKey": "persist-test-1794219162369",
+      "provider": "MOCK_GATEWAY",
+      "providerReference": "MOCK-UPI-161774",
+      "status": "SUCCESS",
+      "createdAt": "2026-11-09T10:12:42.376Z",
+      "receiptId": "rec-1794219162378",
+      "paidAt": "2026-11-09T10:12:42.378Z"
+    }
+  ],
+  "receipts": [
+    {
+      "id": "rec-1794219162378",
+      "receiptNumber": "REC-202611-0003",
+      "paymentId": "pay-1794219162376",
+      "invoiceId": "inv-t12-0408-202611",
+      "flatId": "flat-t12-0408",
+      "flatIdentifier": "T12-0408",
+      "residentName": "Swati Joshi",
+      "billingPeriod": "November 2026",
+      "amountPaise": 699000,
+      "paymentReference": "MOCK-UPI-161774",
+      "date": "2026-11-09T10:12:42.378Z"
+    },
+    {
+      "id": "rec-seed-01",
+      "receiptNumber": "REC-202611-0001",
+      "paymentId": "pay-seed-01",
+      "invoiceId": "inv-t07-1203-202611",
+      "flatId": "flat-t07-1203",
+      "flatIdentifier": "T07-1203",
+      "residentName": "Neeraj Kulkarni",
+      "billingPeriod": "November 2026",
+      "amountPaise": 747500,
+      "paymentReference": "MOCK-UPI-98201",
+      "date": "2026-11-01T10:01:00Z"
+    },
+    {
+      "id": "rec-seed-02",
+      "receiptNumber": "REC-202611-0002",
+      "paymentId": "pay-seed-02",
+      "invoiceId": "inv-t21-1601-202611",
+      "flatId": "flat-t21-1601",
+      "flatIdentifier": "T21-1601",
+      "residentName": "Aamir Shaikh",
+      "billingPeriod": "November 2026",
+      "amountPaise": 500000,
+      "paymentReference": "MOCK-UPI-98202",
+      "date": "2026-11-03T11:02:00Z"
+    }
+  ],
+  "ledger": [
+    {
+      "id": "led-init-1",
+      "flatId": "flat-t07-1203",
+      "entryType": "BILL",
+      "amountPaise": 747500,
+      "description": "Monthly Maintenance November 2026",
+      "createdAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "led-init-2",
+      "flatId": "flat-t07-1203",
+      "entryType": "PAYMENT",
+      "amountPaise": 747500,
+      "description": "Online Payment (Ref: MOCK-UPI-98201)",
+      "reference": "MOCK-UPI-98201",
+      "createdAt": "2026-11-01T10:01:00Z"
+    },
+    {
+      "id": "led-init-3",
+      "flatId": "flat-t12-0408",
+      "entryType": "BILL",
+      "amountPaise": 637000,
+      "description": "Monthly Maintenance November 2026",
+      "createdAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "led-init-4",
+      "flatId": "flat-t12-0408",
+      "entryType": "LATE_FEE",
+      "amountPaise": 62000,
+      "description": "Overdue interest penalty (47 days overdue, demo policy)",
+      "createdAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "led-init-5",
+      "flatId": "flat-t21-1601",
+      "entryType": "BILL",
+      "amountPaise": 1066000,
+      "description": "Monthly Maintenance November 2026",
+      "createdAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "led-init-6",
+      "flatId": "flat-t21-1601",
+      "entryType": "LATE_FEE",
+      "amountPaise": 33000,
+      "description": "Overdue interest penalty (18 days overdue, demo policy)",
+      "createdAt": "2026-11-01T00:00:00Z"
+    },
+    {
+      "id": "led-init-7",
+      "flatId": "flat-t21-1601",
+      "entryType": "PAYMENT",
+      "amountPaise": 500000,
+      "description": "Partial payment received (Ref: MOCK-UPI-98202)",
+      "reference": "MOCK-UPI-98202",
+      "createdAt": "2026-11-03T11:02:00Z"
+    },
+    {
+      "id": "led-1794219162381",
+      "flatId": "flat-t12-0408",
+      "entryType": "PAYMENT",
+      "amountPaise": 699000,
+      "description": "Online Payment (Ref: MOCK-UPI-161774)",
+      "reference": "MOCK-UPI-161774",
+      "createdAt": "2026-11-09T10:12:42.378Z"
+    }
+  ]
+}

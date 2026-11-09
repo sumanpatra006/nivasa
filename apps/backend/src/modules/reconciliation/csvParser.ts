@@ -154,3 +154,4 @@ export function parseBankCsv(csvContent: string): ParseResult {
     totalRows: lines.length - 1,
   };
 }
+

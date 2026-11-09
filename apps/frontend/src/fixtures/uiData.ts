@@ -9,6 +9,7 @@ export interface DemoFlat {
   flatNumber: string;
   tower: string;
   residentName: string;
+  phone: string;
   role: 'Owner' | 'Tenant';
   areaSqFt: number;
   monthlyBillPaise: number;
@@ -23,6 +24,7 @@ export const DEMO_FLATS: DemoFlat[] = [
     tower: 'T07',
     flatNumber: '1203',
     residentName: 'Neeraj Kulkarni',
+    phone: '9820000001',
     role: 'Owner',
     areaSqFt: 1150,
     monthlyBillPaise: 747500, // ₹7,475 @ ₹6.50/sq ft
@@ -35,6 +37,7 @@ export const DEMO_FLATS: DemoFlat[] = [
     tower: 'T12',
     flatNumber: '0408',
     residentName: 'Swati Joshi',
+    phone: '9820000002',
     role: 'Tenant',
     areaSqFt: 980,
     monthlyBillPaise: 637000, // ₹6,370 @ ₹6.50/sq ft
@@ -47,6 +50,7 @@ export const DEMO_FLATS: DemoFlat[] = [
     tower: 'T21',
     flatNumber: '1601',
     residentName: 'Aamir Shaikh',
+    phone: '9820000003',
     role: 'Owner',
     areaSqFt: 1640,
     monthlyBillPaise: 1066000, // ₹10,660 @ ₹6.50/sq ft

@@ -1,87 +1,52 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
 import { rbacMiddleware } from '../../middleware/rbac.middleware.js';
-import { USER_ROLES, calculateMaintenancePaise } from '@nivasa/shared';
+import { USER_ROLES } from '@nivasa/shared';
+import { societyStore } from './societyStore.js';
 
 export const billingRouter = Router();
 
 billingRouter.use(authMiddleware);
 
+// GET /api/v1/bills - Fetch invoices for authorized user/flats
 billingRouter.get('/', (req: Request, res: Response) => {
   const user = req.user!;
-  const sampleInvoices = [
-    {
-      id: 'inv-t07-1203-202611',
-      flatId: 'flat-t07-1203',
-      billingPeriod: '2026-11',
-      areaSqFt: 1150,
-      ratePerSqFt: 650,
-      baseAmountPaise: calculateMaintenancePaise(1150, 650),
-      lateFeePaise: 0,
-      totalAmountPaise: 747500,
-      paidAmountPaise: 747500,
-      dueDate: '2026-11-10T00:00:00Z',
-      status: 'PAID',
-      daysOverdue: 0,
-    },
-    {
-      id: 'inv-t12-0408-202611',
-      flatId: 'flat-t12-0408',
-      billingPeriod: '2026-11',
-      areaSqFt: 980,
-      ratePerSqFt: 650,
-      baseAmountPaise: calculateMaintenancePaise(980, 650),
-      lateFeePaise: 0,
-      totalAmountPaise: 637000,
-      paidAmountPaise: 0,
-      dueDate: '2026-09-24T00:00:00Z',
-      status: 'OVERDUE',
-      daysOverdue: 47,
-    },
-    {
-      id: 'inv-t21-1601-202611',
-      flatId: 'flat-t21-1601',
-      billingPeriod: '2026-11',
-      areaSqFt: 1640,
-      ratePerSqFt: 650,
-      baseAmountPaise: calculateMaintenancePaise(1640, 650),
-      lateFeePaise: 0,
-      totalAmountPaise: 1066000,
-      paidAmountPaise: 500000,
-      dueDate: '2026-10-23T00:00:00Z',
-      status: 'PARTIALLY_PAID',
-      daysOverdue: 18,
-    },
-  ];
+  const allInvoices = societyStore.getInvoices();
 
   if (user.role === USER_ROLES.RESIDENT) {
-    const userInvoices = sampleInvoices.filter((inv) => user.flatIds.includes(inv.flatId));
+    const userInvoices = allInvoices.filter((inv) => user.flatIds.includes(inv.flatId));
     res.status(200).json({ invoices: userInvoices });
     return;
   }
 
-  res.status(200).json({ invoices: sampleInvoices });
+  // Staff and Committee see all society invoices
+  res.status(200).json({ invoices: allInvoices });
 });
 
+// GET /api/v1/bills/:id - Fetch single invoice with horizontal flat isolation
 billingRouter.get('/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  res.status(200).json({
-    invoice: {
-      id,
-      flatId: 'flat-t07-1203',
-      billingPeriod: '2026-11',
-      areaSqFt: 1150,
-      ratePerSqFt: 650,
-      baseAmountPaise: 747500,
-      lateFeePaise: 0,
-      totalAmountPaise: 747500,
-      paidAmountPaise: 747500,
-      status: 'PAID',
-      dueDate: '2026-11-10T00:00:00Z',
-    },
-  });
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const user = req.user!;
+  const invoice = societyStore.getInvoiceById(id);
+
+  if (!invoice) {
+    res.status(404).json({ error: 'Not Found', message: `Invoice with ID ${id} not found.` });
+    return;
+  }
+
+  // Enforce flat isolation: resident can only view invoices belonging to their authorized flats
+  if (user.role === USER_ROLES.RESIDENT && !user.flatIds.includes(invoice.flatId)) {
+    res.status(403).json({
+      error: 'Forbidden',
+      message: 'You are not authorized to view this invoice.',
+    });
+    return;
+  }
+
+  res.status(200).json({ invoice });
 });
 
+// POST /api/v1/bills/generate - Committee/Accounts bulk billing cycle generation
 billingRouter.post(
   '/generate',
   rbacMiddleware([USER_ROLES.ACCOUNTS, USER_ROLES.COMMITTEE]),
@@ -93,4 +58,3 @@ billingRouter.post(
     });
   }
 );
-
