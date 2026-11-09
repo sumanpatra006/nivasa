@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nivasa — Technical Design Document</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --walnut-900: #1d1613;
+      --walnut-800: #2c221e;
+      --walnut-700: #42352f;
+      --sand-50: #faf8f5;
+      --sand-100: #f5f2eb;
+      --sand-200: #ebe5db;
+      --sand-300: #d8cebe;
+      --sage-700: #2c4436;
+      --sage-600: #3f5e4d;
+      --sage-50: #f2f7f4;
+      --amber-700: #b45309;
+      --amber-50: #fffbeb;
+      --border: #e3ded6;
+    }
+
+    @page {
+      size: A4;
+      margin: 20mm 15mm 20mm 15mm;
+      @bottom-right {
+        content: counter(page);
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 9pt;
+        color: #786f66;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.6;
+      color: var(--walnut-900);
+      background-color: #ffffff;
+      padding: 40px;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    /* Header & Cover Banner */
+    .doc-header {
+      border-bottom: 2px solid var(--walnut-800);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .project-badge {
+      display: inline-block;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background-color: var(--sand-200);
+      color: var(--walnut-800);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 26pt;
+      font-weight: 700;
+      color: var(--walnut-900);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 12pt;
+      color: var(--walnut-700);
+      margin-bottom: 16px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 16px;
+      font-size: 9.5pt;
+      background-color: var(--sand-50);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 6px;
+    }
+
+    .meta-item strong {
+      color: var(--walnut-800);
+    }
+
+    .meta-item a {
+      color: var(--sage-600);
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    /* Headings */
+    h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 16pt;
+      font-weight: 700;
+      color: var(--walnut-900);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-top: 36px;
+      margin-bottom: 16px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: var(--walnut-800);
+      margin-top: 22px;
+      margin-bottom: 10px;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 14px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px 0;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--sand-100);
+      font-weight: 700;
+      color: var(--walnut-900);
+    }
+
+    tr:nth-child(even) {
+      background-color: var(--sand-50);
+    }
+
+    /* Code & Pre */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      background-color: var(--sand-100);
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: var(--walnut-900);
+    }
+
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      background-color: var(--sand-50);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      margin: 14px 0;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      line-height: 1.45;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-left: 4px solid var(--sage-600);
+      background-color: var(--sage-50);
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 16px 0;
+      font-size: 9.5pt;
+    }
+
+    .callout.alert {
+      border-left-color: var(--amber-700);
+      background-color: var(--amber-50);
+    }
+
+    .callout strong {
+      color: var(--walnut-900);
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header / Cover Section -->
+  <header class="doc-header">
+    <div class="project-badge">Production Architecture • Version 1.0</div>
+    <h1>NIVASA</h1>
+    <div class="subtitle">Technical Design Document — Residential Society Management Platform</div>
+    
+    <div class="meta-grid">
+      <div class="meta-item"><strong>GitHub Repository:</strong> <a href="https://github.com/sumanpatra006/nivasa.git">https://github.com/sumanpatra006/nivasa.git</a></div>
+      <div class="meta-item"><strong>Live Web App:</strong> <a href="https://nivasa.vercel.app">https://nivasa.vercel.app</a></div>
+      <div class="meta-item"><strong>Target Scale:</strong> 2,400 Apartments • 28 Towers</div>
+      <div class="meta-item"><strong>Date:</strong> November 2026</div>
+    </div>
+  </header>
+
+  <!-- Executive Summary -->
+  <section>
+    <h2>Executive Summary</h2>
+    <p>
+      <strong>Nivasa</strong> is an enterprise residential operating platform designed for Indian cooperative housing societies and high-rise apartment complexes. It replaces fragmented paper registers, disparate spreadsheets, and unmonitored WhatsApp groups with a unified, high-integrity system.
+    </p>
+    <p>
+      The platform addresses five foundational societal workflows: automated maintenance billing with an absolute integer-paise standard (zero floating-point drift), deterministic 7-evidence bank statement reconciliation, hybrid AI grievance triage with deterministic life-safety emergency overrides, DPDP Act 2023-compliant gatekeeper kiosk kiosks with offline synchronization, and an executive committee oversight dashboard.
+    </p>
+  </section>
+
+  <!-- 1. Architecture -->
+  <section>
+    <h2>1. System Architecture & Technology Justification</h2>
+    <h3>1.1 The Modular Monolith</h3>
+    <p>
+      Nivasa is architected as a <strong>Modular Monolith</strong> structured under a single monorepo (<code>@nivasa/shared</code>, <code>@nivasa/backend</code>, <code>@nivasa/frontend</code>).
+    </p>
+    <div class="callout">
+      <strong>Why Modular Monolith Over Microservices:</strong><br>
+      Residential society finance requires atomic relational consistency across invoices, receipts, and flat ledgers. A distributed microservices architecture introduces distributed transaction failure modes (two-phase commit latency, saga rollbacks), which are unacceptable for audited housing society records. A modular monolith guarantees ACID guarantees inside PostgreSQL transactions while preserving clear domain boundaries.
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Architectural Rationale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Language</strong></td>
+          <td>TypeScript 5.x (Strict)</td>
+          <td>End-to-end type safety spanning database entities, REST responses, and UI forms.</td>
+        </tr>
+        <tr>
+          <td><strong>Frontend</strong></td>
+          <td>React 18, Vite, Tailwind CSS</td>
+          <td>Sub-second HMR, high rendering performance for large bank reconciliation queues, and responsive tablet UI.</td>
+        </tr>
+        <tr>
+          <td><strong>State / Data</strong></td>
+          <td>TanStack Query & Zod</td>
+          <td>Automatic background cache invalidation and shared schema validation across frontend and backend.</td>
+        </tr>
+        <tr>
+          <td><strong>Backend API</strong></td>
+          <td>Node.js, Express</td>
+          <td>Asynchronous non-blocking I/O with modular routers, middleware RBAC, and streaming CSV parser.</td>
+        </tr>
+        <tr>
+          <td><strong>Database</strong></td>
+          <td>PostgreSQL (Neon) + Prisma ORM</td>
+          <td>Strong relational integrity, foreign key cascading, unique transaction indices, and connection pooling.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="page-break"></div>
+
+  <!-- 2. Data Model & Integrity -->
+  <section>
+    <h2>2. Relational Data Model & Financial Mathematics</h2>
+    <h3>2.1 The Integer-Paise Standard</h3>
+    <p>
+      Financial calculations never use JavaScript <code>Number</code> floating-point arithmetic. All balances, late fees, and rates are stored as <strong>integer paise</strong> (1 INR = 100 paise). An 1,150 sq ft flat billed at ₹6.50/sq ft computes as <code>1150 &times; 650 = 747,500</code> paise (₹7,475.00), preventing any fractional rounding loss.
+    </p>
+
+    <h3>2.2 Core Relational Schema</h3>
+    <pre>
+┌──────────────┐         ┌────────────────────┐         ┌──────────────┐
+│     User     │1       *│   FlatMembership   │*       1│     Flat     │
+│  id (UUID)   ├────────►│  userId / flatId   │◄────────┤  id (UUID)   │
+│  phone (UQ)  │         │  membershipType    │         │  tower/flat# │
+└──────┬───────┘         └────────────────────┘         └──────┬───────┘
+       │                                                       │
+       │1                                                      │1
+       ▼*                                                      ▼*
+┌──────────────┐         ┌────────────────────┐         ┌──────────────┐
+│   Payment    │*       1│      Invoice       │1       *│ LedgerEntry  │
+│idempotencyKey│◄────────┤  [flatId, period]  ├────────►│ debit/credit │
+│ amountPaise  │         │  totalAmountPaise  │         │ amountPaise  │
+└──────┬───────┘         └────────────────────┘         └──────────────┘
+       │1
+       ▼0..1
+┌──────────────┐
+│   Receipt    │
+│receiptNumber │
+│  amountPaise │
+└──────────────┘</pre>
+  </section>
+
+  <!-- 3. Workflows and AI -->
+  <section>
+    <h2>3. Application Workflows & AI Implementation</h2>
+
+    <h3>3.1 Bank Statement Reconciliation Engine</h3>
+    <p>
+      Bank statements (HDFC, ICICI, SBI CSV exports) are parsed with zero silent row discards. A deterministic 7-evidence matching algorithm evaluates candidate invoices:
+    </p>
+    <ul>
+      <li><strong>Tier 1 (+40%):</strong> Exact payment reference string match in bank narrative.</li>
+      <li><strong>Tier 2 (+25%):</strong> Verified resident UPI ID match.</li>
+      <li><strong>Tier 3 (+20%):</strong> Tower and flat identifier match (e.g. "T07-1203").</li>
+      <li><strong>Tier 4 (+15%):</strong> Exact amount matching invoice outstanding balance.</li>
+      <li><strong>Tier 5 & 6 (+10% each):</strong> Due-date proximity and past resident payment method.</li>
+      <li><strong>Ambiguity Protection:</strong> If multiple candidate flats match the same score or amount, automatic posting is halted, and the transaction is placed into <code>NEEDS_REVIEW</code> for human accounting review.</li>
+    </ul>
+
+    <h3>3.2 Complaint AI Triage & Deterministic Safety Escalation</h3>
+    <p>
+      Grievances undergo a dual-stage safety and intelligence pipeline:
+    </p>
+    <div class="callout alert">
+      <strong>Deterministic Safety Rule Engine (Priority 1):</strong><br>
+      To prevent dangerous AI hallucinations, complaints mentioning <em>"gas smell"</em>, <em>"sparks / fire"</em>, <em>"lift stuck with passenger"</em>, or <em>"electric shock"</em> immediately override AI classification, assign <strong>CRITICAL</strong> urgency, dispatch an alert to the facility duty manager, and lock out automated closure.
+    </div>
+    <p>
+      For non-emergency complaints, the <strong>Google Gemini AI Adapter</strong> categorizes the issue (Plumbing, Electrical, Lift, Security, etc.), infers urgency, and recommends a maintenance technician with transparent reasoning. If external AI services are offline, a local keyword fallback engine seamlessly assumes triage duties with no disruption.
+    </p>
+
+    <h3>3.3 Gatekeeper Tablet & DPDP Act 2023 Compliance</h3>
+    <ul>
+      <li><strong>Touchscreen Ergonomics:</strong> High-contrast 64px touch targets and dedicated PIN keypad designed for low-cost outdoor gate tablets.</li>
+      <li><strong>Offline Queue:</strong> Local IndexedDB queue buffers arrivals when society Wi-Fi drops and synchronizes idempotently via client UUIDs upon reconnection.</li>
+      <li><strong>90-Day Privacy Purge:</strong> Physical visitor photo files are permanently expunged from disk after 90 days in compliance with statutory Indian data minimization laws.</li>
+    </ul>
+  </section>
+
+  <div class="page-break"></div>
+
+  <!-- 4. UI/UX Decisions -->
+  <section>
+    <h2>4. UI/UX Design Decisions</h2>
+    <p>
+      Nivasa departs from generic, harsh SaaS aesthetics in favor of a <strong>Warm Editorial Design System</strong>:
+    </p>
+    <ul>
+      <li><strong>Color Palette:</strong> Deep Walnut (<code>#2c221e</code>) and Warm Sand (<code>#faf8f5</code>) establish an inviting, authoritative atmosphere that minimizes glare for elderly residents.</li>
+      <li><strong>Visual Density:</strong> High-density data tables with monospaced numbers (<code>tabular-nums</code>) for accounting staff; spacious, friendly card layouts for residents.</li>
+      <li><strong>Accessibility:</strong> WCAG AA 4.5:1 contrast compliance across all text elements and interactive form controls.</li>
+    </ul>
+  </section>
+
+  <!-- 5. Scope & Future Roadmap -->
+  <section>
+    <h2>5. Scope Adjustments & Future Roadmap</h2>
+    <h3>5.1 What Was Deliberately Cut</h3>
+    <ul>
+      <li><strong>Video Intercom via WebRTC:</strong> Cut in favor of fast 6-digit PIN passes to prevent gate queue congestion.</li>
+      <li><strong>Automated License Plate Recognition (ANPR):</strong> Cut due to high hardware camera dependency and non-standard Indian plate fonts.</li>
+      <li><strong>Full Double-Entry Balance Sheet General Ledger:</strong> Flat ledgers and dues ageing were prioritized over depreciation schedules.</li>
+    </ul>
+
+    <h3>5.2 Future Roadmap (Phase 2)</h3>
+    <ul>
+      <li><strong>Live Dynamic UPI QR Webhooks:</strong> Real-time payment confirmation via Razorpay/Cashfree webhook callbacks.</li>
+      <li><strong>Multi-Gate WebSocket Cluster:</strong> Instant sync across North, South, and Service gates using Redis pub/sub.</li>
+      <li><strong>Multilingual Voice Dictation:</strong> Speech-to-complaint logging in Hindi and Marathi using Whisper and Gemini.</li>
+      <li><strong>IoT Sub-Meter Telemetry:</strong> Automated digital water and DG power meter logging into monthly invoices.</li>
+    </ul>
+  </section>
+</div>
+
+</body>
+</html>
