@@ -49,5 +49,14 @@ data/photos/
 # Skills and Agent settings
 .agents/
 
-# Specification and documentation markdown files
-*.md
+# Allow documentation markdown files
+!README.md
+!deployment.md
+!TECHNICAL_DESIGN_DOCUMENT.md
+!TDD.md
+!DESIGN.md
+!ARCHITECTURE.md
+!DATA_MODEL.md
+!AI_RULES.md
+!TESTING.md
+!AGENTS.md
